@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "3605259207",
+    "project_id": "project-outfitcheck",
+    "storage_bucket": "project-outfitcheck.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:3605259207:android:5a8e668fe3c438a3472fe2",
+        "android_client_info": {
+          "package_name": "com.example.outfitcheck"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "3605259207-i0m42pr8dba3gkct4s3lknkiase7ao1i.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.outfitcheck",
+            "certificate_hash": "a7a06a8f8099b21fe02f80198639a78c4116a964"
+          }
+        },
+        {
+          "client_id": "3605259207-05ni1l53hb3d61k844ajp0khh2alog2a.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCc1GMwcx7nYOTQz9-zl1uXvfwLnT9iK1Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "3605259207-05ni1l53hb3d61k844ajp0khh2alog2a.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
