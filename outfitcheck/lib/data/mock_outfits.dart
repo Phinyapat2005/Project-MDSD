@@ -32,7 +32,7 @@ final List<OutfitItem> mockOutfits = [
     imageUrl:
         'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?auto=format&fit=crop&w=600&q=80',
     description: 'เสื้อสเวตเตอร์ไหมพรมถักเนื้อนุ่ม โทนสีละมุน เหมาะกับวันเดทสุดโรแมนติก',
-    gender: 'Unisex',
+    gender: 'หญิง',
   ),
   const OutfitItem(
     id: '9',
