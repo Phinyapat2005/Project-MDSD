@@ -4,8 +4,8 @@ import '../data/mock_outfits.dart';
 import '../models/outfit_item.dart';
 import '../widgets/ai_stylist_sheet.dart';
 import '../widgets/outfit_card.dart';
-import '../favorite.dart' hide OutfitItem;
-import '../profile_screen.dart';
+import 'favorite.dart' hide OutfitItem;
+import 'profile_screen.dart';
 
 /// [SearchScreen] - หน้าค้นหาเสื้อผ้าและสไตล์ (Outfit Search Screen)
 /// ออกแบบตาม Design System ใน Figma โครงการ OutfitCheck
@@ -577,13 +577,13 @@ class _SearchScreenState extends State<SearchScreen> {
           unselectedItemColor: const Color(0xFFC4B2A9),
           type: BottomNavigationBarType.fixed,
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: '˹���á'),
-            BottomNavigationBarItem(icon: Icon(Icons.search), label: '����'),
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'หน้าแรก'),
+            BottomNavigationBarItem(icon: Icon(Icons.search), label: 'ค้นหา'),
             BottomNavigationBarItem(
               icon: Icon(Icons.archive),
-              label: '�������ͼ��',
+              label: 'ตู้เสื้อผ้า',
             ),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: '�����'),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'โปรไฟล์'),
           ],
         ),
       ),

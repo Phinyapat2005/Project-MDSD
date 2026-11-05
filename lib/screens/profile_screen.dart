@@ -4,10 +4,23 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'login_screen.dart';
 import 'favorite.dart';
-import 'screens/search_screen.dart';
+import 'search_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final String? userId;
+  final String? userEmail;
+  final String? userDisplayName;
+  final String? userPhotoUrl;
+  final FirebaseFirestore? firestore;
+
+  const ProfileScreen({
+    super.key,
+    this.userId,
+    this.userEmail,
+    this.userDisplayName,
+    this.userPhotoUrl,
+    this.firestore,
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -15,6 +28,18 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final int _selectedIndex = 3;
+
+  String? get _currentUserId {
+    if (widget.userId != null) return widget.userId;
+    try {
+      return FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  FirebaseFirestore get _firestore =>
+      widget.firestore ?? FirebaseFirestore.instance;
 
   Future<void> _signOut() async {
     final navigator = Navigator.of(context);
@@ -195,7 +220,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             });
 
                             // อัปเดตข้อมูลขึ้น Cloud Firestore
-                            await FirebaseFirestore.instance
+                            await _firestore
                                 .collection('users')
                                 .doc(userId)
                                 .update(updateData);
@@ -224,23 +249,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = FirebaseAuth.instance.currentUser;
+    final uid = _currentUserId;
 
     const colorHeaderBg = Color(0xFF3C261A);
     const colorPageBg = Color(0xFFF8F4EE);
     const colorBadge = Color(0xFFC46835);
     const colorCardBg = Colors.white;
 
-    if (currentUser == null) {
+    if (uid == null) {
       return const LoginScreen();
     }
+
+    User? currentUser;
+    try {
+      currentUser = FirebaseAuth.instance.currentUser;
+    } catch (_) {}
 
     return Scaffold(
       backgroundColor: colorPageBg,
       body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
+        stream: _firestore
             .collection('users')
-            .doc(currentUser.uid)
+            .doc(uid)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -249,11 +279,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           final data = snapshot.data?.data() as Map<String, dynamic>? ?? {};
 
-          final String name =
-              currentUser.displayName ?? data['name'] ?? 'ผู้ใช้งาน';
-          final String email = currentUser.email ?? data['email'] ?? '-';
-          final String photoUrl =
-              currentUser.photoURL ?? data['photoUrl'] ?? '';
+          final String name = widget.userDisplayName ??
+              currentUser?.displayName ??
+              data['name'] ??
+              'ผู้ใช้งาน';
+          final String email = widget.userEmail ??
+              currentUser?.email ??
+              data['email'] ??
+              '-';
+          final String photoUrl = widget.userPhotoUrl ??
+              currentUser?.photoURL ??
+              data['photoUrl'] ??
+              '';
 
           final String phone = data['phone'] ?? 'ยังไม่ระบุ';
           final String birthDate = data['birthDate'] ?? 'ยังไม่ระบุ';
@@ -358,7 +395,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 TextButton.icon(
                                   onPressed: () => _showEditDialog(
-                                    currentUser.uid,
+                                    uid,
                                     'ข้อมูลสัดส่วนร่างกาย',
                                     {
                                       'ส่วนสูง (ชม.)': height,
@@ -453,7 +490,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 TextButton.icon(
                                   onPressed: () => _showEditDialog(
-                                    currentUser.uid,
+                                    uid,
                                     'ข้อมูลเพิ่มเติม',
                                     {'เบอร์โทร': phone, 'วันเกิด': birthDate},
                                   ),
@@ -508,7 +545,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
-          if (index == 1) {
+          if (index == 0 || index == 1) {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const SearchScreen()),

@@ -2,7 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FirestoreService {
   // ดึง Instance ของ Firestore มาใช้งาน
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseFirestore _db;
+
+  FirestoreService({FirebaseFirestore? firestore})
+      : _db = firestore ?? FirebaseFirestore.instance;
 
   // -------------------------------------------------------------------
   // 1. CREATE: สร้างหรืออัปเดตข้อมูลผู้ใช้ (Save User Data)
@@ -50,7 +53,7 @@ class FirestoreService {
         'createdAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      debugPrint('Error: $e');
+      print('Error adding outfit: $e');
       rethrow;
     }
   }

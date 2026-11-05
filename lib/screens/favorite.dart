@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'profile_screen.dart';
-import 'screens/search_screen.dart';
+import 'search_screen.dart';
 
 // โมเดลข้อมูลรายการเสื้อผ้า
 class OutfitItem {
@@ -87,7 +87,14 @@ class Outfit {
 }
 
 class FavoriteScreen extends StatefulWidget {
-  const FavoriteScreen({super.key});
+  final String? userId;
+  final FirebaseFirestore? firestore;
+
+  const FavoriteScreen({
+    super.key,
+    this.userId,
+    this.firestore,
+  });
 
   @override
   State<FavoriteScreen> createState() => _FavoriteScreenState();
@@ -96,14 +103,26 @@ class FavoriteScreen extends StatefulWidget {
 class _FavoriteScreenState extends State<FavoriteScreen> {
   final int _selectedIndex = 2;
 
+  String? get _currentUserId {
+    if (widget.userId != null) return widget.userId;
+    try {
+      return FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  FirebaseFirestore get _firestore =>
+      widget.firestore ?? FirebaseFirestore.instance;
+
   // ฟังก์ชันสลับสถานะรายการโปรดใน Firestore (ลบออกจาก sub-collection outfits)
   Future<void> _toggleFavorite(Outfit outfit) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    final uid = _currentUserId;
+    if (uid == null) return;
 
-    final docRef = FirebaseFirestore.instance
+    final docRef = _firestore
         .collection('users')
-        .doc(user.uid)
+        .doc(uid)
         .collection('outfits')
         .doc(outfit.id);
 
@@ -334,9 +353,9 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    final uid = _currentUserId;
 
-    if (user == null) {
+    if (uid == null) {
       return const Scaffold(
         body: Center(child: Text('กรุณาเข้าสู่ระบบก่อนใช้งาน')),
       );
@@ -356,9 +375,9 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
         elevation: 2,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
+        stream: _firestore
             .collection('users')
-            .doc(user.uid)
+            .doc(uid)
             .collection('outfits')
             .snapshots(),
         builder: (context, snapshot) {
@@ -513,7 +532,7 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
-          if (index == 1) {
+          if (index == 0 || index == 1) {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const SearchScreen()),
