@@ -1,17 +1,26 @@
-# outfitcheck
+# OutfitCheck
 
-A new Flutter project.
+แอปแนะนำการแต่งตัว สร้างด้วย Flutter และรองรับการ build เป็นเว็บไซต์
 
-## Getting Started
+## รันเว็บในเครื่อง
 
-This project is a starting point for a Flutter application.
+```powershell
+flutter run -d chrome
+```
 
-A few resources to get you started if this is your first Flutter project:
+## Deploy เว็บไป Firebase Hosting
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+ติดตั้ง Node.js และ Flutter ก่อน จากนั้นเปิด PowerShell ที่โฟลเดอร์โปรเจกต์ `outfitcheck` แล้วล็อกอิน Firebase (ทำครั้งแรกครั้งเดียว):
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```powershell
+npx firebase-tools login
+```
+
+Build และ deploy เว็บ:
+
+```powershell
+flutter build web --release
+npx firebase-tools deploy --only hosting
+```
+
+ไฟล์ `firebase.json` ตั้งค่าให้ deploy จาก `build/web` และ `.firebaserc` เลือก Firebase project `project-outfitcheck` ไว้แล้ว ไม่ต้องใส่ Firebase token หรือข้อมูลล็อกอินลงใน Git
