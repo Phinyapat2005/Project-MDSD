@@ -141,15 +141,19 @@ class _AiStylistSheetState extends State<AiStylistSheet> {
                     children: [
                       Row(
                         children: [
-                          const Text(
-                            'AI Stylist แนะนำชุด',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF2C1E18),
+                          const Flexible(
+                            child: Text(
+                              'AI Stylist แนะนำชุด',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2C1E18),
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
@@ -481,96 +485,92 @@ class _AiStylistSheetState extends State<AiStylistSheet> {
 
           // Section Title: Matched Items
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.checkroom_rounded,
-                    size: 20,
+              const Icon(
+                Icons.checkroom_rounded,
+                size: 18,
+                color: Color(0xFF382319),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'เซ็ตชุดที่ AI แนะนำ (${res.recommendedItems.length} ชิ้น)',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C1E18),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'รวม ฿${_calculateTotal(res.recommendedItems)}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFAC5D3E),
+                ),
+              ),
+              const SizedBox(width: 6),
+              // ปุ่มเลื่อน ซ้าย - ขวา
+              InkWell(
+                onTap: () {
+                  if (_itemsScrollController.hasClients) {
+                    _itemsScrollController.animateTo(
+                      (_itemsScrollController.offset - 160).clamp(
+                        0.0,
+                        _itemsScrollController.position.maxScrollExtent,
+                      ),
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeOut,
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFDED5CC)),
+                  ),
+                  child: const Icon(
+                    Icons.chevron_left_rounded,
+                    size: 18,
                     color: Color(0xFF382319),
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'เซ็ตชุดที่ AI แนะนำ (${res.recommendedItems.length} ชิ้น)',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C1E18),
-                    ),
-                  ),
-                ],
+                ),
               ),
-              Row(
-                children: [
-                  Text(
-                    'รวม ฿${_calculateTotal(res.recommendedItems)}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFAC5D3E),
-                    ),
+              const SizedBox(width: 4),
+              InkWell(
+                onTap: () {
+                  if (_itemsScrollController.hasClients) {
+                    _itemsScrollController.animateTo(
+                      (_itemsScrollController.offset + 160).clamp(
+                        0.0,
+                        _itemsScrollController.position.maxScrollExtent,
+                      ),
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeOut,
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFDED5CC)),
                   ),
-                  const SizedBox(width: 8),
-                  // ปุ่มเลื่อน ซ้าย - ขวา
-                  InkWell(
-                    onTap: () {
-                      if (_itemsScrollController.hasClients) {
-                        _itemsScrollController.animateTo(
-                          (_itemsScrollController.offset - 160).clamp(
-                            0.0,
-                            _itemsScrollController.position.maxScrollExtent,
-                          ),
-                          duration: const Duration(milliseconds: 250),
-                          curve: Curves.easeOut,
-                        );
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFFDED5CC)),
-                      ),
-                      child: const Icon(
-                        Icons.chevron_left_rounded,
-                        size: 18,
-                        color: Color(0xFF382319),
-                      ),
-                    ),
+                  child: const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: Color(0xFF382319),
                   ),
-                  const SizedBox(width: 4),
-                  InkWell(
-                    onTap: () {
-                      if (_itemsScrollController.hasClients) {
-                        _itemsScrollController.animateTo(
-                          (_itemsScrollController.offset + 160).clamp(
-                            0.0,
-                            _itemsScrollController.position.maxScrollExtent,
-                          ),
-                          duration: const Duration(milliseconds: 250),
-                          curve: Curves.easeOut,
-                        );
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFFDED5CC)),
-                      ),
-                      child: const Icon(
-                        Icons.chevron_right_rounded,
-                        size: 18,
-                        color: Color(0xFF382319),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ],
           ),
@@ -578,7 +578,7 @@ class _AiStylistSheetState extends State<AiStylistSheet> {
 
           // Items Horizontal List (รองรับการลากด้วยเมาส์ และทัชสกรีน)
           SizedBox(
-            height: 195,
+            height: 212,
             child: ScrollConfiguration(
               behavior: ScrollConfiguration.of(context).copyWith(
                 dragDevices: {
@@ -669,7 +669,7 @@ class _AiStylistSheetState extends State<AiStylistSheet> {
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(14)),
               child: AspectRatio(
-                aspectRatio: 1.15,
+                aspectRatio: 1.2,
                 child: Image.network(
                   item.imageUrl,
                   fit: BoxFit.cover,
@@ -683,40 +683,43 @@ class _AiStylistSheetState extends State<AiStylistSheet> {
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.category,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Color(0xFFAC5D3E),
-                      fontWeight: FontWeight.w600,
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      item.category,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Color(0xFFAC5D3E),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    item.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2C1E18),
+                    Text(
+                      item.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2C1E18),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    item.formattedPrice,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C1E18),
+                    Text(
+                      item.formattedPrice,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2C1E18),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
