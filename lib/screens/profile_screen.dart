@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'login_screen.dart';
+import 'home_screen.dart';
 import 'favorite.dart';
 import 'search_screen.dart';
 
@@ -545,13 +546,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
-          if (index == 0 || index == 1) {
+          if (index == 0) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          } else if (index == 1) {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const SearchScreen()),
             );
           } else if (index == 2) {
-            // สลับไปหน้า FavoriteScreen โดยตรง
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const FavoriteScreen()),

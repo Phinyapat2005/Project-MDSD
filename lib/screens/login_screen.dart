@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'profile_screen.dart';
+import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -43,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (userCredential.user != null && mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const ProfileScreen()),
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       }
     } on FirebaseAuthException catch (e) {
@@ -106,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const ProfileScreen()),
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
           );
         }
       }
@@ -171,7 +171,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const ProfileScreen()),
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
           );
         }
       }

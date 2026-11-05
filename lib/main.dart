@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'screens/login_screen.dart';
+import 'screens/home_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/favorite.dart';
 import 'screens/search_screen.dart';
@@ -28,12 +29,12 @@ class MyApp extends StatelessWidget {
       // กำหนด Routes สำหรับใช้เปลี่ยนหน้า
       routes: {
         '/login': (context) => const LoginScreen(),
+        '/home': (context) => const HomeScreen(),
         '/profile': (context) => const ProfileScreen(),
-        '/favorite': (context) =>
-            const FavoriteScreen(), // เรียกใช้คลาส FavoriteScreen
+        '/favorite': (context) => const FavoriteScreen(),
         '/search': (context) => const SearchScreen(),
       },
-      // ตรวจสอบสถานะการ Login
+      // ตรวจสอบสถานะการ Login: หากเข้าสู่ระบบแล้วให้นำทางไปหน้าแรก (HomeScreen)
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
@@ -43,7 +44,7 @@ class MyApp extends StatelessWidget {
             );
           }
           if (snapshot.hasData && snapshot.data != null) {
-            return const ProfileScreen();
+            return const HomeScreen();
           }
           return const LoginScreen();
         },
