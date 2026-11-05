@@ -24,18 +24,13 @@ class AiStylistResult {
 }
 
 class AiStylistService {
-  /// API Key ที่ส่งผ่าน --dart-define=GEMINI_API_KEY=...
-  static const String envApiKey = String.fromEnvironment('GEMINI_API_KEY');
-
-  /// API Key ที่ผู้ใช้กรอกเพิ่มเติมในแอปได้โดยตรง (สำหรับทดสอบ)
-  static String? customApiKey;
+  /// 🔑 วาง Google Gemini API Key ที่นี่ได้เลยครับ (แอปจะดึงไปใช้ทันทีโดยอัตโนมัติ)
+  static const String apiKey = '';
 
   /// ดึง API Key ที่พร้อมใช้งาน
   static String get activeApiKey {
-    if (customApiKey != null && customApiKey!.trim().isNotEmpty) {
-      return customApiKey!.trim();
-    }
-    return envApiKey.trim();
+    if (apiKey.trim().isNotEmpty) return apiKey.trim();
+    return const String.fromEnvironment('GEMINI_API_KEY').trim();
   }
 
   /// ตรวจสอบว่ามีการใส่ API Key หรือไม่

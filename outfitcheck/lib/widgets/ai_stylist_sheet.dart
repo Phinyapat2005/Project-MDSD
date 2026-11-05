@@ -92,105 +92,6 @@ class _AiStylistSheetState extends State<AiStylistSheet> {
     }
   }
 
-  void _showApiKeyDialog(BuildContext context) {
-    final keyController = TextEditingController(
-      text: AiStylistService.customApiKey ?? '',
-    );
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFFFBF8F5),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF382319),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.vpn_key_rounded, color: Color(0xFFE8B87D), size: 18),
-              ),
-              const SizedBox(width: 10),
-              const Text(
-                'Gemini API Key',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2C1E18)),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                AiStylistService.envApiKey.isNotEmpty
-                    ? 'ตรวจพบ API Key จาก Environment (--dart-define) แล้ว แต่คุณสามารถกรอกคีย์ใหม่ทับที่นี่ได้'
-                    : 'กรอก Google Gemini API Key เพื่อให้ AI ประมวลผลแบบสด (Live API) หรือเว้นว่างไว้เพื่อใช้ระบบจำลองออฟไลน์',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF8A7D75)),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: keyController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  hintText: 'วาง API Key ที่นี่ (AIzaSy...)',
-                  hintStyle: const TextStyle(fontSize: 12, color: Colors.grey),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                '💡 คีย์จะถูกใช้ในเครื่องเท่านั้น ไม่มีการบันทึกลง Git',
-                style: TextStyle(fontSize: 11, color: Color(0xFFAC5D3E)),
-              ),
-            ],
-          ),
-          actions: [
-            if (AiStylistService.customApiKey != null && AiStylistService.customApiKey!.isNotEmpty)
-              TextButton(
-                onPressed: () {
-                  AiStylistService.customApiKey = null;
-                  Navigator.pop(ctx);
-                  setState(() {});
-                  _requestAiAdvice(_promptController.text);
-                },
-                child: const Text('ล้างคีย์', style: TextStyle(color: Colors.red)),
-              ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('ยกเลิก', style: TextStyle(color: Color(0xFF8A7D75))),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF382319),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () {
-                final text = keyController.text.trim();
-                AiStylistService.customApiKey = text.isEmpty ? null : text;
-                Navigator.pop(ctx);
-                setState(() {});
-                _requestAiAdvice(_promptController.text);
-              },
-              child: const Text('บันทึก', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -276,17 +177,6 @@ class _AiStylistSheetState extends State<AiStylistSheet> {
                       ),
                     ],
                   ),
-                ),
-                IconButton(
-                  tooltip: 'ตั้งค่า Gemini API Key',
-                  icon: Icon(
-                    Icons.vpn_key_rounded,
-                    color: AiStylistService.hasActiveKey
-                        ? const Color(0xFF2E7D32)
-                        : const Color(0xFF8A7D75),
-                    size: 20,
-                  ),
-                  onPressed: () => _showApiKeyDialog(context),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close, color: Color(0xFF8A7D75)),
