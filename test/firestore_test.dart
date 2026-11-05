@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:outfitcheck/favorite.dart';
 
 void main() {
   group('Firestore Service Tests', () {
@@ -37,6 +38,33 @@ void main() {
 
       expect(snapshot.docs.length, 1);
       expect(snapshot.docs.first.data()['lookName'], 'Urban Casual');
+    });
+
+    test('ทดสอบการแปลง Outfit.fromFirestore รองรับ imageUrl, outfitName, category', () async {
+      final instance = FakeFirebaseFirestore();
+
+      final docRef = await instance
+          .collection('users')
+          .doc('user_test')
+          .collection('outfits')
+          .add({
+        'outfitName': 'Urban Minimal',
+        'imageUrl': 'https://example.com/urban.jpg',
+        'category': 'Casual',
+        'items': [
+          {'text': 'เสื้อยืดสีขาว'},
+          {'text': 'กางเกงสแล็ค'},
+        ],
+      });
+
+      final doc = await docRef.get();
+      final outfit = Outfit.fromFirestore(doc);
+
+      expect(outfit.title, 'Urban Minimal');
+      expect(outfit.image, 'https://example.com/urban.jpg');
+      expect(outfit.tags, contains('Casual'));
+      expect(outfit.items.length, 2);
+      expect(outfit.items[0].text, 'เสื้อยืดสีขาว');
     });
   });
 }
