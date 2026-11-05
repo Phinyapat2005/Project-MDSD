@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../models/outfit_item.dart';
 import '../services/ai_stylist_service.dart';
@@ -34,6 +35,7 @@ class AiStylistSheet extends StatefulWidget {
 
 class _AiStylistSheetState extends State<AiStylistSheet> {
   late TextEditingController _promptController;
+  final ScrollController _itemsScrollController = ScrollController();
   bool _isLoading = true;
   AiStylistResult? _result;
 
@@ -56,6 +58,7 @@ class _AiStylistSheetState extends State<AiStylistSheet> {
   @override
   void dispose() {
     _promptController.dispose();
+    _itemsScrollController.dispose();
     super.dispose();
   }
 
@@ -434,30 +437,104 @@ class _AiStylistSheetState extends State<AiStylistSheet> {
                   ),
                 ],
               ),
-              Text(
-                'รวม ฿${_calculateTotal(res.recommendedItems)}',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFFAC5D3E),
-                ),
+              Row(
+                children: [
+                  Text(
+                    'รวม ฿${_calculateTotal(res.recommendedItems)}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFAC5D3E),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // ปุ่มเลื่อน ซ้าย - ขวา
+                  InkWell(
+                    onTap: () {
+                      if (_itemsScrollController.hasClients) {
+                        _itemsScrollController.animateTo(
+                          (_itemsScrollController.offset - 160).clamp(
+                            0.0,
+                            _itemsScrollController.position.maxScrollExtent,
+                          ),
+                          duration: const Duration(milliseconds: 250),
+                          curve: Curves.easeOut,
+                        );
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFDED5CC)),
+                      ),
+                      child: const Icon(
+                        Icons.chevron_left_rounded,
+                        size: 18,
+                        color: Color(0xFF382319),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  InkWell(
+                    onTap: () {
+                      if (_itemsScrollController.hasClients) {
+                        _itemsScrollController.animateTo(
+                          (_itemsScrollController.offset + 160).clamp(
+                            0.0,
+                            _itemsScrollController.position.maxScrollExtent,
+                          ),
+                          duration: const Duration(milliseconds: 250),
+                          curve: Curves.easeOut,
+                        );
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFDED5CC)),
+                      ),
+                      child: const Icon(
+                        Icons.chevron_right_rounded,
+                        size: 18,
+                        color: Color(0xFF382319),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
           const SizedBox(height: 12),
 
-          // Items Horizontal List
+          // Items Horizontal List (รองรับการลากด้วยเมาส์ และทัชสกรีน)
           SizedBox(
             height: 195,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              itemCount: res.recommendedItems.length,
-              separatorBuilder: (context, index) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final item = res.recommendedItems[index];
-                return _buildMiniItemCard(item);
-              },
+            child: ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                dragDevices: {
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.mouse,
+                  PointerDeviceKind.trackpad,
+                  PointerDeviceKind.stylus,
+                },
+              ),
+              child: ListView.separated(
+                controller: _itemsScrollController,
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                itemCount: res.recommendedItems.length,
+                separatorBuilder: (context, index) => const SizedBox(width: 12),
+                itemBuilder: (context, index) {
+                  final item = res.recommendedItems[index];
+                  return _buildMiniItemCard(item);
+                },
+              ),
             ),
           ),
           const SizedBox(height: 20),
@@ -592,3 +669,4 @@ class _AiStylistSheetState extends State<AiStylistSheet> {
         );
   }
 }
+
