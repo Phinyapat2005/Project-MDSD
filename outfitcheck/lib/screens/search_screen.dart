@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import '../data/mock_outfits.dart';
 import '../models/outfit_item.dart';
+import '../widgets/ai_stylist_sheet.dart';
 import '../widgets/outfit_card.dart';
 
 /// [SearchScreen] - หน้าค้นหาเสื้อผ้าและสไตล์ (Outfit Search Screen)
 /// ออกแบบตาม Design System ใน Figma โครงการ OutfitCheck
-/// สามารถนำไปใช้งานเดี่ยวๆ หรือนำไปผสานรวมกับหน้าอื่นๆ ของเพื่อนได้ทันที
+/// รองรับระบบ AI Stylist แนะนำชุดตามโอกาสและสถานการณ์
 class SearchScreen extends StatefulWidget {
   /// สามารถกำหนดหมวดหมู่เริ่มต้นได้ เช่น เมื่อกดมาจากหน้าแรก (ค่าเริ่มต้นคือ 'ทั้งหมด')
   final String initialCategory;
@@ -46,6 +47,16 @@ class _SearchScreenState extends State<SearchScreen> {
     'Chinos',
   ];
 
+  /// สถานการณ์ยอดนิยมสำหรับ AI Stylist
+  final List<Map<String, String>> _aiScenarios = [
+    {'label': '☕ ชุดไปคาเฟ่', 'query': 'ชุดไปคาเฟ่'},
+    {'label': '💼 สัมภาษณ์งาน', 'query': 'สัมภาษณ์งาน'},
+    {'label': '🍿 ไปเดทวันเสาร์', 'query': 'ไปเดทวันเสาร์'},
+    {'label': '🎓 ไปเรียนมหาลัย', 'query': 'ไปเรียนมหาลัย'},
+    {'label': '🌴 เที่ยวทะเล', 'query': 'เที่ยวทะเล'},
+    {'label': '🕶️ สตรีทเท่ๆ', 'query': 'สตรีทเท่ๆ'},
+  ];
+
   late String _selectedCategory;
   String _searchQuery = '';
   bool _isFocused = false;
@@ -83,22 +94,33 @@ class _SearchScreenState extends State<SearchScreen> {
     }).toList();
   }
 
+  /// เปิดหน้าต่าง AI Stylist แนะนำชุด
+  void _openAiStylist([String? prompt]) {
+    _searchFocusNode.unfocus();
+    final queryText = prompt ??
+        (_searchQuery.isNotEmpty ? _searchQuery : 'ชุดไปคาเฟ่');
+
+    AiStylistSheet.show(
+      context,
+      initialPrompt: queryText,
+      onItemTap: (item) => _handleItemTap(item),
+    );
+  }
+
   /// บันทึกคำค้นหาลงประวัติ
   void _saveToRecentSearches(String query) {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return;
     setState(() {
-      // ลบคำซ้ำออกก่อน แล้วใส่ล่าสุดไว้หัวลิสต์
       _recentSearches.remove(trimmed);
       _recentSearches.insert(0, trimmed);
-      // จำกัดจำนวนสูงสุด
       if (_recentSearches.length > _maxRecentSearches) {
         _recentSearches.removeLast();
       }
     });
   }
 
-  /// ทำการค้นหาจากคำที่กำหนด (ใช้ร่วมกันทั้ง Keyboard Submit และกดแท็ก)
+  /// ทำการค้นหาจากคำที่กำหนด
   void _performSearch(String query) {
     final trimmed = query.trim();
     _searchController.text = trimmed;
@@ -112,17 +134,26 @@ class _SearchScreenState extends State<SearchScreen> {
     _searchFocusNode.unfocus();
     if (trimmed.isNotEmpty) {
       _saveToRecentSearches(trimmed);
+
+      // ถ้าเป็นคำเกี่ยวกับสถานการณ์ แนะนำให้เปิด AI
+      final lower = trimmed.toLowerCase();
+      if (lower.contains('คาเฟ่') ||
+          lower.contains('สัมภาษณ์') ||
+          lower.contains('เดท') ||
+          lower.contains('ทะเล') ||
+          lower.contains('เรียน') ||
+          lower.contains('สตรีท')) {
+        _openAiStylist(trimmed);
+      }
     }
   }
 
-  /// ลบประวัติค้นหาอันใดอันหนึ่ง
   void _removeRecentSearch(String query) {
     setState(() {
       _recentSearches.remove(query);
     });
   }
 
-  /// ลบประวัติค้นหาทั้งหมด
   void _clearAllRecentSearches() {
     setState(() {
       _recentSearches.clear();
@@ -267,7 +298,6 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredItems;
-    // แสดงหน้าประวัติค้นหาเมื่อ: กดที่ช่องค้นหา (focused) หรือยังไม่ได้พิมพ์อะไร
     final bool showSearchSuggestions = _searchQuery.isEmpty && _isFocused;
 
     return GestureDetector(
@@ -278,20 +308,59 @@ class _SearchScreenState extends State<SearchScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ─── Top Section: Title + Search Bar ───
+              // ─── Top Section: Title + Search Bar + AI Stylist Banner ───
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'ค้นหา',
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2C1E18),
-                        letterSpacing: -0.5,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'ค้นหา',
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2C1E18),
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        // ปุ่มลัด AI Stylist
+                        GestureDetector(
+                          onTap: () => _openAiStylist(),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFAC5D3E).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: const Color(0xFFAC5D3E).withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome,
+                                  size: 14,
+                                  color: Color(0xFFAC5D3E),
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'AI Stylist',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFFAC5D3E),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 14),
 
@@ -323,7 +392,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           fontSize: 15,
                         ),
                         decoration: InputDecoration(
-                          hintText: 'ค้นหาเสื้อผ้า สไตล์...',
+                          hintText: 'ค้นหาเสื้อผ้า, สไตล์ หรือบอก AI...',
                           hintStyle: const TextStyle(
                             color: Color(0xFFA89F95),
                             fontSize: 14,
@@ -349,12 +418,105 @@ class _SearchScreenState extends State<SearchScreen> {
                                     _searchFocusNode.requestFocus();
                                   },
                                 )
-                              : null,
+                              : IconButton(
+                                  tooltip: 'ถาม AI Stylist',
+                                  icon: const Icon(
+                                    Icons.auto_awesome,
+                                    color: Color(0xFFAC5D3E),
+                                    size: 20,
+                                  ),
+                                  onPressed: () => _openAiStylist(),
+                                ),
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 14,
                           ),
+                        ),
+                      ),
+                    ),
+
+                    // AI Stylist Banner Card
+                    GestureDetector(
+                      onTap: () => _openAiStylist(
+                          _searchQuery.isNotEmpty ? _searchQuery : 'ชุดไปคาเฟ่'),
+                      child: Container(
+                        margin: const EdgeInsets.only(top: 10),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFF382319),
+                              Color(0xFF4A3124),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF382319).withValues(alpha: 0.15),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(7),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFAC5D3E).withValues(alpha: 0.35),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.auto_awesome,
+                                color: Color(0xFFF7C896),
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: const [
+                                  Text(
+                                    '✨ Gemini AI แนะนำชุดตามโอกาส',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    'บอกสถานการณ์ เช่น "ชุดไปคาเฟ่" ให้ AI จัดเซ็ตให้',
+                                    style: TextStyle(
+                                      color: Color(0xFFD6C8BC),
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 11, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFAC5D3E),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Text(
+                                'ถาม AI',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -388,7 +550,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   // ─────────────────────────────────────────────
-  // Widget: หน้าแสดงประวัติค้นหา + แท็กยอดนิยม
+  // Widget: หน้าแสดงประวัติค้นหา + AI Scenarios + แท็กยอดนิยม
   // ─────────────────────────────────────────────
   Widget _buildSearchSuggestions() {
     return SingleChildScrollView(
@@ -397,6 +559,58 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── AI Situations Section ──
+          Row(
+            children: const [
+              Icon(
+                Icons.auto_awesome,
+                size: 16,
+                color: Color(0xFFAC5D3E),
+              ),
+              SizedBox(width: 6),
+              Text(
+                'ให้ AI แนะนำตามสถานการณ์',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2C1E18),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _aiScenarios.map((item) {
+              return GestureDetector(
+                onTap: () => _openAiStylist(item['query']),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFAC5D3E).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFFAC5D3E).withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Text(
+                    item['label']!,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF382319),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 20),
+
           // ── Recent Searches Section ──
           if (_recentSearches.isNotEmpty) ...[
             Row(
@@ -424,7 +638,6 @@ class _SearchScreenState extends State<SearchScreen> {
               ],
             ),
             const SizedBox(height: 10),
-            // รายการประวัติค้นหา
             ...List.generate(_recentSearches.length, (index) {
               final query = _recentSearches[index];
               return Padding(
@@ -474,14 +687,14 @@ class _SearchScreenState extends State<SearchScreen> {
 
           // ── Popular Tags Section ──
           Row(
-            children: [
-              const Icon(
+            children: const [
+              Icon(
                 Icons.local_fire_department_rounded,
                 size: 18,
                 color: Color(0xFFAC5D3E),
               ),
-              const SizedBox(width: 6),
-              const Text(
+              SizedBox(width: 6),
+              Text(
                 'ค้นหายอดนิยม',
                 style: TextStyle(
                   fontSize: 15,
@@ -652,6 +865,21 @@ class _SearchScreenState extends State<SearchScreen> {
             style: TextStyle(
               fontSize: 13,
               color: Color(0xFFA89F95),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () => _openAiStylist(_searchQuery),
+            icon: const Icon(Icons.auto_awesome, size: 16, color: Colors.white),
+            label: const Text(
+              'ให้ AI ช่วยแนะนำชุดตามคำนี้',
+              style: TextStyle(color: Colors.white, fontSize: 13),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF382319),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ],
