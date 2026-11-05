@@ -26,6 +26,7 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
 
   final List<String> _categories = [
     'ทั้งหมด',
@@ -35,18 +36,39 @@ class _SearchScreenState extends State<SearchScreen> {
     'กระเป๋า',
   ];
 
+  /// แท็กคำค้นหายอดนิยม (Suggested Quick Tags)
+  final List<String> _popularTags = [
+    'เสื้อ Oversized',
+    'Minimal',
+    'Streetwear',
+    'รองเท้า Loafer',
+    'กระเป๋าหนัง',
+    'Chinos',
+  ];
+
   late String _selectedCategory;
   String _searchQuery = '';
+  bool _isFocused = false;
+
+  /// ประวัติการค้นหาล่าสุด (Recent Searches) สูงสุด 8 รายการ
+  final List<String> _recentSearches = [];
+  static const int _maxRecentSearches = 8;
 
   @override
   void initState() {
     super.initState();
     _selectedCategory = widget.initialCategory;
+    _searchFocusNode.addListener(() {
+      setState(() {
+        _isFocused = _searchFocusNode.hasFocus;
+      });
+    });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -59,6 +81,52 @@ class _SearchScreenState extends State<SearchScreen> {
           item.category.toLowerCase().contains(_searchQuery.toLowerCase());
       return matchesCategory && matchesQuery;
     }).toList();
+  }
+
+  /// บันทึกคำค้นหาลงประวัติ
+  void _saveToRecentSearches(String query) {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return;
+    setState(() {
+      // ลบคำซ้ำออกก่อน แล้วใส่ล่าสุดไว้หัวลิสต์
+      _recentSearches.remove(trimmed);
+      _recentSearches.insert(0, trimmed);
+      // จำกัดจำนวนสูงสุด
+      if (_recentSearches.length > _maxRecentSearches) {
+        _recentSearches.removeLast();
+      }
+    });
+  }
+
+  /// ทำการค้นหาจากคำที่กำหนด (ใช้ร่วมกันทั้ง Keyboard Submit และกดแท็ก)
+  void _performSearch(String query) {
+    final trimmed = query.trim();
+    _searchController.text = trimmed;
+    _searchController.selection = TextSelection.fromPosition(
+      TextPosition(offset: trimmed.length),
+    );
+    setState(() {
+      _searchQuery = trimmed;
+      _isFocused = false;
+    });
+    _searchFocusNode.unfocus();
+    if (trimmed.isNotEmpty) {
+      _saveToRecentSearches(trimmed);
+    }
+  }
+
+  /// ลบประวัติค้นหาอันใดอันหนึ่ง
+  void _removeRecentSearch(String query) {
+    setState(() {
+      _recentSearches.remove(query);
+    });
+  }
+
+  /// ลบประวัติค้นหาทั้งหมด
+  void _clearAllRecentSearches() {
+    setState(() {
+      _recentSearches.clear();
+    });
   }
 
   void _handleItemTap(OutfitItem item) {
@@ -199,208 +267,394 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredItems;
+    // แสดงหน้าประวัติค้นหาเมื่อ: กดที่ช่องค้นหา (focused) หรือยังไม่ได้พิมพ์อะไร
+    final bool showSearchSuggestions = _searchQuery.isEmpty && _isFocused;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7F2EC),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top Section (Title, Search Bar)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title: "ค้นหา"
-                  const Text(
-                    'ค้นหา',
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2C1E18),
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Search Bar
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: (value) {
-                        setState(() {
-                          _searchQuery = value.trim();
-                        });
-                      },
-                      style: const TextStyle(
+    return GestureDetector(
+      onTap: () => _searchFocusNode.unfocus(),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF7F2EC),
+        body: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ─── Top Section: Title + Search Bar ───
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'ค้นหา',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
                         color: Color(0xFF2C1E18),
-                        fontSize: 15,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'ค้นหาเสื้อผ้า สไตล์...',
-                        hintStyle: const TextStyle(
-                          color: Color(0xFFA89F95),
-                          fontSize: 14,
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.search,
-                          color: Color(0xFF9E8E81),
-                          size: 22,
-                        ),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: Color(0xFF9E8E81),
-                                  size: 18,
-                                ),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() {
-                                    _searchQuery = '';
-                                  });
-                                },
-                              )
-                            : null,
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
+                        letterSpacing: -0.5,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
+                    const SizedBox(height: 14),
 
-            // Category Filter Chips (แนวนอน)
-            SizedBox(
-              height: 42,
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                scrollDirection: Axis.horizontal,
-                itemCount: _categories.length,
-                separatorBuilder: (context, index) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final category = _categories[index];
-                  final isSelected = category == _selectedCategory;
-
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedCategory = category;
-                      });
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 9,
-                      ),
+                    // Search Bar
+                    Container(
                       decoration: BoxDecoration(
-                        color: isSelected
-                            ? const Color(0xFF382319)
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(20),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
-                      child: Center(
-                        child: Text(
-                          category,
-                          style: TextStyle(
-                            color: isSelected
-                                ? Colors.white
-                                : const Color(0xFF382319),
-                            fontSize: 13,
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.w500,
+                      child: TextField(
+                        controller: _searchController,
+                        focusNode: _searchFocusNode,
+                        textInputAction: TextInputAction.search,
+                        onChanged: (value) {
+                          setState(() {
+                            _searchQuery = value.trim();
+                          });
+                        },
+                        onSubmitted: (value) => _performSearch(value),
+                        style: const TextStyle(
+                          color: Color(0xFF2C1E18),
+                          fontSize: 15,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'ค้นหาเสื้อผ้า สไตล์...',
+                          hintStyle: const TextStyle(
+                            color: Color(0xFFA89F95),
+                            fontSize: 14,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: Color(0xFF9E8E81),
+                            size: 22,
+                          ),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Color(0xFF9E8E81),
+                                    size: 18,
+                                  ),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() {
+                                      _searchQuery = '';
+                                      _isFocused = true;
+                                    });
+                                    _searchFocusNode.requestFocus();
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
                           ),
                         ),
                       ),
                     ),
-                  );
-                },
+                  ],
+                ),
               ),
-            ),
 
-            const SizedBox(height: 14),
-
-            // Product Grid or Empty State
-            Expanded(
-              child: filtered.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+              // ─── Expanded Area: Suggestions หรือ Category + Grid ───
+              Expanded(
+                child: showSearchSuggestions
+                    ? _buildSearchSuggestions()
+                    : Column(
                         children: [
-                          Icon(
-                            Icons.search_off_rounded,
-                            size: 64,
-                            color: Colors.brown.shade200,
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'ไม่พบเสื้อผ้าที่ค้นหา',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF6E5D53),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'ลองค้นหาด้วยคำอื่น หรือเลือกหมวดหมู่อื่นดูนะ',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFFA89F95),
-                            ),
+                          // Category Filter Chips
+                          _buildCategoryChips(),
+                          const SizedBox(height: 14),
+                          // Product Grid or Empty State
+                          Expanded(
+                            child: filtered.isEmpty
+                                ? _buildEmptyState()
+                                : _buildGrid(filtered),
                           ),
                         ],
                       ),
-                    )
-                  : GridView.builder(
-                      keyboardDismissBehavior:
-                          ScrollViewKeyboardDismissBehavior.onDrag,
-                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-                      physics: const BouncingScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 14,
-                        mainAxisSpacing: 14,
-                        childAspectRatio: 0.72,
-                      ),
-                      itemCount: filtered.length,
-                      itemBuilder: (context, index) {
-                        final item = filtered[index];
-                        return OutfitCard(
-                          item: item,
-                          onTap: () => _handleItemTap(item),
-                        );
-                      },
-                    ),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // Widget: หน้าแสดงประวัติค้นหา + แท็กยอดนิยม
+  // ─────────────────────────────────────────────
+  Widget _buildSearchSuggestions() {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Recent Searches Section ──
+          if (_recentSearches.isNotEmpty) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'ค้นหาล่าสุด',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2C1E18),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: _clearAllRecentSearches,
+                  child: const Text(
+                    'ล้างทั้งหมด',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFFAC5D3E),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            // รายการประวัติค้นหา
+            ...List.generate(_recentSearches.length, (index) {
+              final query = _recentSearches[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEDE5DC),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.history,
+                      size: 18,
+                      color: Color(0xFF8A7360),
+                    ),
+                  ),
+                  title: Text(
+                    query,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF2C1E18),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(
+                      Icons.close,
+                      size: 16,
+                      color: Color(0xFFA89F95),
+                    ),
+                    onPressed: () => _removeRecentSearch(query),
+                  ),
+                  onTap: () => _performSearch(query),
+                ),
+              );
+            }),
+            const SizedBox(height: 16),
+            const Divider(
+              color: Color(0xFFE5DDD5),
+              thickness: 1,
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // ── Popular Tags Section ──
+          Row(
+            children: [
+              const Icon(
+                Icons.local_fire_department_rounded,
+                size: 18,
+                color: Color(0xFFAC5D3E),
+              ),
+              const SizedBox(width: 6),
+              const Text(
+                'ค้นหายอดนิยม',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2C1E18),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _popularTags.map((tag) {
+              return GestureDetector(
+                onTap: () => _performSearch(tag),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: const Color(0xFFE0D6CC),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.trending_up_rounded,
+                        size: 14,
+                        color: Color(0xFFAC5D3E),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        tag,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF2C1E18),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // Widget: Category Filter Chips (แนวนอน)
+  // ─────────────────────────────────────────────
+  Widget _buildCategoryChips() {
+    return SizedBox(
+      height: 42,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        scrollDirection: Axis.horizontal,
+        itemCount: _categories.length,
+        separatorBuilder: (context, index) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final category = _categories[index];
+          final isSelected = category == _selectedCategory;
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                _selectedCategory = category;
+              });
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+              decoration: BoxDecoration(
+                color: isSelected ? const Color(0xFF382319) : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  category,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : const Color(0xFF382319),
+                    fontSize: 13,
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // Widget: Product Grid
+  // ─────────────────────────────────────────────
+  Widget _buildGrid(List<OutfitItem> items) {
+    return GridView.builder(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+      physics: const BouncingScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 14,
+        mainAxisSpacing: 14,
+        childAspectRatio: 0.72,
+      ),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return OutfitCard(
+          item: item,
+          onTap: () => _handleItemTap(item),
+        );
+      },
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // Widget: Empty State (ไม่พบผลการค้นหา)
+  // ─────────────────────────────────────────────
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off_rounded,
+            size: 64,
+            color: Colors.brown.shade200,
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'ไม่พบเสื้อผ้าที่ค้นหา',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF6E5D53),
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'ลองค้นหาด้วยคำอื่น หรือเลือกหมวดหมู่อื่นดูนะ',
+            style: TextStyle(
+              fontSize: 13,
+              color: Color(0xFFA89F95),
+            ),
+          ),
+        ],
       ),
     );
   }
