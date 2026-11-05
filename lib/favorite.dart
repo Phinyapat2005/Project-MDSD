@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'profile_screen.dart';
+import 'screens/search_screen.dart';
 
 // โมเดลข้อมูลรายการเสื้อผ้า
 class OutfitItem {
@@ -512,7 +513,12 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
-          if (index == 3) {
+          if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const SearchScreen()),
+            );
+          } else if (index == 3) {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const ProfileScreen()),

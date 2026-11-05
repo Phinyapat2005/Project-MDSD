@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
 import 'favorite.dart';
+import 'screens/search_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +31,7 @@ class MyApp extends StatelessWidget {
         '/profile': (context) => const ProfileScreen(),
         '/favorite': (context) =>
             const FavoriteScreen(), // เรียกใช้คลาส FavoriteScreen
+        '/search': (context) => const SearchScreen(),
       },
       // ตรวจสอบสถานะการ Login
       home: StreamBuilder<User?>(
