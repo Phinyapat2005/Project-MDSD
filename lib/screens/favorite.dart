@@ -501,6 +501,7 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
                                         vertical: 4,
                                       ),
                                       child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Icon(
                                             i.icon,
@@ -508,10 +509,15 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
                                             color: const Color(0xFF7A6458),
                                           ),
                                           const SizedBox(width: 8),
-                                          Text(
-                                            i.text,
-                                            style: const TextStyle(
-                                              color: Color(0xFF4A3B32),
+                                          Expanded(
+                                            child: Text(
+                                              i.text,
+                                              style: const TextStyle(
+                                                color: Color(0xFF4A3B32),
+                                                fontSize: 13,
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
                                         ],

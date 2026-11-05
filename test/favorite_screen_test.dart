@@ -83,6 +83,45 @@ void main() {
 
       expect(find.text('รายการเสื้อผ้าในลุคนี้'), findsNothing);
     });
+
+    testWidgets('ข้อความรายการเสื้อผ้ายาวมากๆ สามารถแสดงผลได้โดยไม่เกิด Overflow',
+        (WidgetTester tester) async {
+      final fakeDb = FakeFirebaseFirestore();
+
+      await fakeDb
+          .collection('users')
+          .doc('user_test')
+          .collection('outfits')
+          .doc('outfit_long')
+          .set({
+        'title': 'Tropical Coastal / Summer Vacation Long Name',
+        'image': '',
+        'tags': ['Tropical', 'Summer'],
+        'items': [
+          {'text': 'เสื้อ: เสื้อเชิ้ตฮาวาย ลายทรอปิคอล (฿690)'},
+          {'text': 'กางเกง: กางเกงขาสั้นผ้าลินิน สีเบจ (฿590)'},
+          {'text': 'รองเท้า: รองเท้าแตะหนัง Birks สีน้ำตาล (฿1,290)'},
+          {'text': 'กระเป๋า: กระเป๋าผ้า Tote Bag ลินินมินิมอล (฿490)'},
+        ],
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FavoriteScreen(
+            userId: 'user_test',
+            firestore: fakeDb,
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      // ต้องแสดงผลรายการครบทั้ง 4 ชิ้นโดยไม่มี Exception / Overflow
+      expect(find.text('เสื้อ: เสื้อเชิ้ตฮาวาย ลายทรอปิคอล (฿690)'), findsOneWidget);
+      expect(find.text('กางเกง: กางเกงขาสั้นผ้าลินิน สีเบจ (฿590)'), findsOneWidget);
+      expect(find.text('รองเท้า: รองเท้าแตะหนัง Birks สีน้ำตาล (฿1,290)'), findsOneWidget);
+      expect(find.text('กระเป๋า: กระเป๋าผ้า Tote Bag ลินินมินิมอล (฿490)'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   });
 }
-
