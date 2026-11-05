@@ -1,5 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/outfit_item.dart';
 import '../services/ai_stylist_service.dart';
 
@@ -608,17 +610,9 @@ class _AiStylistSheetState extends State<AiStylistSheet> {
             width: double.infinity,
             height: 48,
             child: ElevatedButton.icon(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'บันทึกเซ็ต "${res.styleVibe}" (${res.recommendedItems.length} ชิ้น) ลงตู้เสื้อผ้าแล้ว! ✨',
-                    ),
-                    backgroundColor: const Color(0xFF382319),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                await _saveAiSetToWardrobe(res);
               },
               icon: const Icon(Icons.bookmark_add_rounded, color: Colors.white),
               label: const Text(
@@ -640,6 +634,68 @@ class _AiStylistSheetState extends State<AiStylistSheet> {
         ],
       ),
     );
+  }
+
+  Future<void> _saveAiSetToWardrobe(AiStylistResult res) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('กรุณาเข้าสู่ระบบก่อนบันทึกเซ็ตลงตู้เสื้อผ้า'),
+            backgroundColor: Color(0xFFAC5D3E),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      final coverImage = res.recommendedItems.isNotEmpty
+          ? res.recommendedItems.first.imageUrl
+          : '';
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('outfits')
+          .add({
+        'title': res.styleVibe,
+        'outfitName': res.styleVibe,
+        'image': coverImage,
+        'imageUrl': coverImage,
+        'category': 'AI Stylist Set',
+        'tags': res.tags,
+        'isFavorite': true,
+        'items': res.recommendedItems
+            .map((item) => {
+                  'text': '${item.category}: ${item.title} (฿${item.price})',
+                  'itemImage': item.imageUrl,
+                })
+            .toList(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'บันทึกเซ็ต "${res.styleVibe}" (${res.recommendedItems.length} ชิ้น) ลงตู้เสื้อผ้าแล้ว! ✨',
+          ),
+          backgroundColor: const Color(0xFF382319),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('ไม่สามารถบันทึกลงตู้เสื้อผ้าได้: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Widget _buildMiniItemCard(OutfitItem item) {
@@ -729,7 +785,7 @@ class _AiStylistSheetState extends State<AiStylistSheet> {
   }
 
   String _calculateTotal(List<OutfitItem> items) {
-    final total = items.fold<int>(0, (sum, item) => sum + item.price);
+    final total = items.fold<int>(0, (acc, item) => acc + item.price);
     return total.toString().replaceAllMapped(
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (Match m) => '${m[1]},',

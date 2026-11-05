@@ -6,6 +6,8 @@ import '../widgets/ai_stylist_sheet.dart';
 import '../widgets/outfit_card.dart';
 import 'favorite.dart' hide OutfitItem;
 import 'profile_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// [SearchScreen] - หน้าค้นหาเสื้อผ้าและสไตล์ (Outfit Search Screen)
 /// ออกแบบตาม Design System ใน Figma โครงการ OutfitCheck
@@ -177,6 +179,63 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
+  Future<void> _addToWardrobe(OutfitItem item) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('กรุณาเข้าสู่ระบบก่อนเพิ่มเสื้อผ้าลงตู้เสื้อผ้า'),
+            backgroundColor: Color(0xFFAC5D3E),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('outfits')
+          .add({
+        'title': item.title,
+        'outfitName': item.title,
+        'image': item.imageUrl,
+        'imageUrl': item.imageUrl,
+        'category': item.category,
+        'tags': [item.category, item.gender],
+        'price': item.price,
+        'isFavorite': true,
+        'items': [
+          {
+            'text': '${item.category}: ${item.title}',
+            'itemImage': item.imageUrl,
+          }
+        ],
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('เพิ่ม "${item.title}" ลงตู้เสื้อผ้าแล้ว! ✨'),
+          backgroundColor: const Color(0xFF382319),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('ไม่สามารถบันทึกลงตู้เสื้อผ้าได้: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   void _showItemDetails(OutfitItem item) {
     showModalBottomSheet(
       context: context,
@@ -269,15 +328,9 @@ class _SearchScreenState extends State<SearchScreen> {
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton.icon(
-                  onPressed: () {
+                  onPressed: () async {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('เพิ่ม "${item.title}" ลงตู้เสื้อผ้าแล้ว!'),
-                        backgroundColor: const Color(0xFF382319),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
+                    await _addToWardrobe(item);
                   },
                   icon: const Icon(Icons.checkroom, color: Colors.white),
                   label: const Text(
