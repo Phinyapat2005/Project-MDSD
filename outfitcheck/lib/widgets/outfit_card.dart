@@ -34,7 +34,7 @@ class OutfitCard extends StatelessWidget {
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               child: AspectRatio(
-                aspectRatio: 1.1,
+                aspectRatio: 1.15,
                 child: Image.network(
                   item.imageUrl,
                   fit: BoxFit.cover,
@@ -73,10 +73,10 @@ class OutfitCard extends StatelessWidget {
             // Content Section
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     // Category Tag
                     Text(
@@ -87,7 +87,6 @@ class OutfitCard extends StatelessWidget {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 2),
                     // Title
                     Text(
                       item.title,
@@ -95,12 +94,11 @@ class OutfitCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Color(0xFF2C1E18),
-                        fontSize: 13,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w600,
-                        height: 1.3,
+                        height: 1.25,
                       ),
                     ),
-                    const SizedBox(height: 4),
                     // Price
                     Text(
                       item.formattedPrice,
@@ -120,4 +118,3 @@ class OutfitCard extends StatelessWidget {
     );
   }
 }
-
