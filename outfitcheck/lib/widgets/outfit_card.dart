@@ -34,7 +34,7 @@ class OutfitCard extends StatelessWidget {
             ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               child: AspectRatio(
-                aspectRatio: 1.05,
+                aspectRatio: 1.1,
                 child: Image.network(
                   item.imageUrl,
                   fit: BoxFit.cover,
@@ -71,44 +71,47 @@ class OutfitCard extends StatelessWidget {
             ),
 
             // Content Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Category Tag
-                  Text(
-                    item.category,
-                    style: const TextStyle(
-                      color: Color(0xFFAC5D3E),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Category Tag
+                    Text(
+                      item.category,
+                      style: const TextStyle(
+                        color: Color(0xFFAC5D3E),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 3),
-                  // Title
-                  Text(
-                    item.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF2C1E18),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(height: 2),
+                    // Title
+                    Text(
+                      item.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF2C1E18),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        height: 1.3,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  // Price
-                  Text(
-                    item.formattedPrice,
-                    style: const TextStyle(
-                      color: Color(0xFF2C1E18),
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+                    const SizedBox(height: 4),
+                    // Price
+                    Text(
+                      item.formattedPrice,
+                      style: const TextStyle(
+                        color: Color(0xFF2C1E18),
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
