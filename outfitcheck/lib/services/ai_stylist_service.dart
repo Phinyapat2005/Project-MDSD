@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import '../data/mock_outfits.dart';
 import '../models/outfit_item.dart';
 
@@ -7,6 +11,7 @@ class AiStylistResult {
   final String advice;
   final List<String> tags;
   final List<OutfitItem> recommendedItems;
+  final bool isLiveAi;
 
   const AiStylistResult({
     required this.scenario,
@@ -14,12 +19,205 @@ class AiStylistResult {
     required this.advice,
     required this.tags,
     required this.recommendedItems,
+    this.isLiveAi = false,
   });
 }
 
 class AiStylistService {
-  /// จำลองการประมวลผลของ Gemini AI ในการวิเคราะห์สถานการณ์และเพศ เพื่อแนะนำชุดที่เหมาะสม
+  /// API Key ที่ส่งผ่าน --dart-define=GEMINI_API_KEY=...
+  static const String envApiKey = String.fromEnvironment('GEMINI_API_KEY');
+
+  /// API Key ที่ผู้ใช้กรอกเพิ่มเติมในแอปได้โดยตรง (สำหรับทดสอบ)
+  static String? customApiKey;
+
+  /// ดึง API Key ที่พร้อมใช้งาน
+  static String get activeApiKey {
+    if (customApiKey != null && customApiKey!.trim().isNotEmpty) {
+      return customApiKey!.trim();
+    }
+    return envApiKey.trim();
+  }
+
+  /// ตรวจสอบว่ามีการใส่ API Key หรือไม่
+  static bool get hasActiveKey => activeApiKey.isNotEmpty;
+
+  /// รายชื่อโมเดล Gemini ที่รองรับ (เรียงตามลำดับความเสถียรและเร็ว)
+  static const List<String> _models = [
+    'gemini-1.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-pro',
+  ];
+
+  /// แนะนำชุดจากสถานการณ์และเพศ
+  /// หากมี GEMINI_API_KEY จะเรียกใช้งาน Google Gemini API จริง
+  /// หากไม่มี API Key หรือเกิดข้อผิดพลาดจากเครือข่าย จะสลับไปใช้ Smart Fallback (ออฟไลน์) อัตโนมัติ
   static Future<AiStylistResult> recommendOutfit(
+    String scenario, {
+    String gender = 'ทั้งหมด',
+  }) async {
+    final cleanPrompt = scenario.trim();
+
+    // 1. ถ้ามี API Key ให้พยายามเรียก Gemini Live API
+    if (hasActiveKey) {
+      try {
+        final liveResult = await _fetchFromGeminiApi(cleanPrompt, gender: gender);
+        if (liveResult != null) {
+          return liveResult;
+        }
+      } catch (e) {
+        debugPrint('Gemini API call failed, falling back to local simulation: $e');
+      }
+    }
+
+    // 2. ถ้าไม่มี API Key หรือเรียก API ไม่สำเร็จ -> ใช้ Fallback ออฟไลน์
+    return _offlineRecommend(cleanPrompt, gender: gender);
+  }
+
+  /// เรียก Google Gemini REST API เพื่อวิเคราะห์และจับคู่ชุด
+  static Future<AiStylistResult?> _fetchFromGeminiApi(
+    String scenario, {
+    required String gender,
+  }) async {
+    // เตรียมข้อมูลแคตตาล็อกสินค้าในแอปให้ Gemini นำไปเลือกจับคู่
+    final catalogBuffer = StringBuffer();
+    for (final item in mockOutfits) {
+      catalogBuffer.writeln(
+        '- ID: "${item.id}" | ชิ้น: ${item.title} | หมวด: ${item.category} | ราคา: ฿${item.price} | เพศ: ${item.gender}',
+      );
+    }
+
+    final systemInstruction = '''
+คุณคือ AI Fashion Stylist มืออาชีพประจำแอป OutfitCheck
+หน้าที่ของคุณ: แนะนำสไตล์การแต่งตัวและจัดเซ็ตชุดเสื้อผ้าให้เหมาะกับโอกาสหรือสถานการณ์ "$scenario" สำหรับเพศ "$gender"
+โดยเลือกจับคู่จากแคตตาล็อกเสื้อผ้าที่มีอยู่ในร้านค้าของเราด้านล่างนี้เท่านั้น:
+
+$catalogBuffer
+
+ข้อกำหนดในการตอบกลับ:
+1. ตอบกลับเป็นรูปแบบ JSON เดียวเท่านั้น (ห้ามมี markdown code block หรือคำอธิบายเพิ่มเติมอื่นนอก JSON)
+2. โครงสร้าง JSON ที่ต้องส่งกลับ:
+{
+  "styleVibe": "ชื่อสไตล์สั้นๆ ภาษาอังกฤษหรือไทย เช่น Minimalist Cafe Hopping",
+  "advice": "คำแนะนำสไตล์ลิสต์อย่างอบอุ่น ละเอียด และเป็นกันเอง (ภาษาไทย) อธิบายว่าทำไมถึงเลือกชุดและชิ้นเหล่านี้",
+  "tags": ["#แท็ก1", "#แท็ก2", "#แท็ก3"],
+  "recommendedItemIds": ["id1", "id2", "id3", "id4"]
+}
+3. เงื่อนไขในการเลือกชุด:
+   - ใน "recommendedItemIds" ต้องเลือก ID ที่มีอยู่ในแคตตาล็อกด้านบนเท่านั้น (ควรเลือก 3 ถึง 4 ชิ้น ให้ครบเซ็ต เช่น เสื้อ, กางเกง/กระโปรง, รองเท้า, กระเป๋า)
+   - หากผู้ใช้เลือกเพศ "ชาย" ให้เลือกเฉพาะไอเทมที่มีเพศ 'ชาย' หรือ 'Unisex'
+   - หากผู้ใช้เลือกเพศ "หญิง" ให้เลือกเฉพาะไอเทมที่มีเพศ 'หญิง' หรือ 'Unisex'
+   - ห้ามสร้าง ID ขึ้นมาเองเด็ดขาด
+''';
+
+    for (final model in _models) {
+      final uri = Uri.parse(
+        'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$activeApiKey',
+      );
+
+      try {
+        final response = await http
+            .post(
+              uri,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'contents': [
+                  {
+                    'parts': [
+                      {'text': systemInstruction}
+                    ]
+                  }
+                ],
+                'generationConfig': {
+                  'responseMimeType': 'application/json',
+                  'temperature': 0.7,
+                },
+              }),
+            )
+            .timeout(const Duration(seconds: 15));
+
+        if (response.statusCode == 200) {
+          final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+          final candidates = decoded['candidates'] as List<dynamic>?;
+          if (candidates != null && candidates.isNotEmpty) {
+            final content = candidates.first['content'];
+            final parts = content?['parts'] as List<dynamic>?;
+            if (parts != null && parts.isNotEmpty) {
+              final rawJsonText = parts.first['text'] as String?;
+              if (rawJsonText != null) {
+                final parsedResult = _parseGeminiJson(
+                  rawJsonText,
+                  scenario: scenario,
+                );
+                if (parsedResult != null) {
+                  return parsedResult;
+                }
+              }
+            }
+          }
+        } else {
+          debugPrint('Model $model returned status ${response.statusCode}: ${response.body}');
+        }
+      } catch (e) {
+        debugPrint('Error with model $model: $e');
+        continue;
+      }
+    }
+
+    return null;
+  }
+
+  static AiStylistResult? _parseGeminiJson(
+    String rawJson, {
+    required String scenario,
+  }) {
+    try {
+      var cleaned = rawJson.trim();
+      if (cleaned.startsWith('```json')) {
+        cleaned = cleaned.substring(7);
+      } else if (cleaned.startsWith('```')) {
+        cleaned = cleaned.substring(3);
+      }
+      if (cleaned.endsWith('```')) {
+        cleaned = cleaned.substring(0, cleaned.length - 3);
+      }
+      cleaned = cleaned.trim();
+
+      final data = jsonDecode(cleaned) as Map<String, dynamic>;
+      final styleVibe =
+          (data['styleVibe'] as String?)?.trim() ?? 'Curated Outfit Style';
+      final advice = (data['advice'] as String?)?.trim() ??
+          'เซ็ตชุดที่ AI สไตลิสต์คัดสรรมาให้เหมาะกับโอกาสนี้เป็นพิเศษ';
+      final tags = (data['tags'] as List<dynamic>?)
+              ?.map((e) => e.toString().trim())
+              .map((e) => e.startsWith('#') ? e : '#$e')
+              .toList() ??
+          ['#OutfitCheck', '#GeminiAI'];
+
+      final itemIds = (data['recommendedItemIds'] as List<dynamic>?)
+              ?.map((e) => e.toString().trim())
+              .toList() ??
+          [];
+
+      final items = _findItemsByIds(itemIds);
+
+      if (items.isNotEmpty) {
+        return AiStylistResult(
+          scenario: scenario,
+          styleVibe: styleVibe,
+          advice: advice,
+          tags: tags,
+          recommendedItems: items,
+          isLiveAi: true,
+        );
+      }
+    } catch (e) {
+      debugPrint('Failed to parse Gemini JSON: $e');
+    }
+    return null;
+  }
+
+  /// จำลองการประมวลผลออฟไลน์ (Offline Fallback Engine)
+  static Future<AiStylistResult> _offlineRecommend(
     String scenario, {
     String gender = 'ทั้งหมด',
   }) async {
