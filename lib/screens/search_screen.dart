@@ -6,6 +6,7 @@ import '../widgets/ai_stylist_sheet.dart';
 import '../widgets/outfit_card.dart';
 import 'favorite.dart' hide OutfitItem;
 import 'profile_screen.dart';
+import 'home_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -384,14 +385,36 @@ class _SearchScreenState extends State<SearchScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'ค้นหา',
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2C1E18),
-                            letterSpacing: -0.5,
-                          ),
+                        Row(
+                          children: [
+                            if (Navigator.canPop(context)) ...[
+                              GestureDetector(
+                                onTap: () => Navigator.pop(context),
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  margin: const EdgeInsets.only(right: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.brown.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(
+                                    Icons.arrow_back_ios_new,
+                                    size: 18,
+                                    color: Color(0xFF2C1E18),
+                                  ),
+                                ),
+                              ),
+                            ],
+                            const Text(
+                              'ค้นหา',
+                              style: TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2C1E18),
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                          ],
                         ),
                         // ปุ่มลัด AI Stylist
                         GestureDetector(
@@ -618,7 +641,16 @@ class _SearchScreenState extends State<SearchScreen> {
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: 1,
           onTap: (index) {
-            if (index == 2) {
+            if (index == 0) {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              } else {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const HomeScreen()),
+                );
+              }
+            } else if (index == 2) {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => const FavoriteScreen()),

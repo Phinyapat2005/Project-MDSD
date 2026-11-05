@@ -25,7 +25,27 @@ void main() {
       // เปลี่ยนแท็บ BottomNavigation
       final wardrobeIcon = find.byIcon(Icons.archive);
       expect(wardrobeIcon, findsOneWidget);
+
+      final homeIcon = find.byIcon(Icons.home);
+      expect(homeIcon, findsOneWidget);
+    });
+
+    testWidgets('สามารถแตะแท็บหน้าแรกเพื่อเปลี่ยนหน้าได้',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: SearchScreen(),
+        ),
+      );
+
+      await tester.pump();
+
+      // แตะที่แท็บหน้าแรก
+      await tester.tap(find.text('หน้าแรก'));
+      await tester.pumpAndSettle();
+
+      // ตรวจสอบว่ามีหน้าแรกแสดงผลขึ้นมา
+      expect(find.text('แนะนำชุดวันนี้'), findsOneWidget);
     });
   });
 }
-
