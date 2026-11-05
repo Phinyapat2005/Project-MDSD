@@ -11,8 +11,6 @@ void main() {
         'name': 'Poomchana Tiamkeaw',
         'email': '67030180@kmitl.ac.th',
       });
-
-      // ดึงข้อมูลมาตรวจสอบ
       final snapshot = await instance
           .collection('users')
           .doc('user_test')
