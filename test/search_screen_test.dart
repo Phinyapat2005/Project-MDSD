@@ -47,5 +47,22 @@ void main() {
       // ตรวจสอบว่ามีหน้าแรกแสดงผลขึ้นมา
       expect(find.text('แนะนำชุดวันนี้'), findsOneWidget);
     });
+
+    testWidgets('แสดง AI Stylist Scenario และประวัติค้นหาเมื่อแตะช่องค้นหา',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: SearchScreen(),
+        ),
+      );
+      await tester.pump();
+
+      // Focus ช่องค้นหา
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+
+      expect(find.text('ให้ AI แนะนำตามสถานการณ์'), findsOneWidget);
+      expect(find.text('☕ ชุดไปคาเฟ่'), findsOneWidget);
+    });
   });
 }

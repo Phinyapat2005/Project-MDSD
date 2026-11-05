@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/local_database_service.dart';
 import 'profile_screen.dart';
 import 'search_screen.dart';
 import 'home_screen.dart';
@@ -85,6 +86,50 @@ class Outfit {
       items: itemList,
     );
   }
+
+  /// แปลงข้อมูลจาก Local SQLite Database Cache
+  factory Outfit.fromCachedMap(Map<String, dynamic> data) {
+    var rawItems = data['items'] as List<dynamic>? ?? [];
+    List<OutfitItem> itemList = rawItems.map((item) {
+      if (item is Map) {
+        return OutfitItem(
+          text: (item['text'] ?? 'เสื้อผ้า').toString(),
+          icon: Icons.checkroom,
+          itemImage: (item['itemImage'] ?? '').toString(),
+        );
+      }
+      return OutfitItem(
+        text: item.toString(),
+        icon: Icons.checkroom,
+        itemImage: '',
+      );
+    }).toList();
+
+    return Outfit(
+      id: (data['id'] ?? '').toString(),
+      title: (data['title'] ?? 'ลุคแต่งตัว').toString(),
+      image: (data['image'] ?? '').toString(),
+      tags: (data['tags'] as List<dynamic>? ?? [])
+          .map((e) => e.toString())
+          .toList(),
+      isFavorite: data['isFavorite'] ?? true,
+      items: itemList,
+    );
+  }
+
+  /// แปลงเป็น Map สำหรับบันทึกลง SQLite Local Cache
+  Map<String, dynamic> toCachedMap() {
+    return {
+      'id': id,
+      'title': title,
+      'image': image,
+      'tags': tags,
+      'isFavorite': isFavorite,
+      'items': items
+          .map((i) => {'text': i.text, 'itemImage': i.itemImage})
+          .toList(),
+    };
+  }
 }
 
 class FavoriteScreen extends StatefulWidget {
@@ -116,7 +161,7 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
   FirebaseFirestore get _firestore =>
       widget.firestore ?? FirebaseFirestore.instance;
 
-  // ฟังก์ชันสลับสถานะรายการโปรดใน Firestore (ลบออกจาก sub-collection outfits)
+  // ฟังก์ชันสลับสถานะรายการโปรดใน Firestore และซิงค์ SQLite
   Future<void> _toggleFavorite(Outfit outfit) async {
     final uid = _currentUserId;
     if (uid == null) return;
@@ -129,6 +174,9 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
 
     if (outfit.isFavorite) {
       await docRef.delete();
+      try {
+        await LocalDatabaseService.instance.deleteCachedOutfit(outfit.id);
+      } catch (_) {}
     } else {
       await docRef.set({
         'title': outfit.title,
@@ -137,6 +185,19 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
         'isFavorite': true,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+      try {
+        await LocalDatabaseService.instance.saveCachedOutfit(
+          id: outfit.id,
+          userId: uid,
+          title: outfit.title,
+          image: outfit.image,
+          tags: outfit.tags,
+          items: outfit.items
+              .map((i) => {'text': i.text, 'itemImage': i.itemImage})
+              .toList(),
+          isFavorite: true,
+        );
+      } catch (_) {}
     }
   }
 
@@ -386,13 +447,33 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
+          // กรณีเกิด Error (เช่น ไม่มีเน็ต หรือ Firebase ไม่ตอบสนอง) ให้โหลดจาก SQLite Local Database
           if (snapshot.hasError) {
-            return Center(child: Text('เกิดข้อผิดพลาด: ${snapshot.error}'));
+            return FutureBuilder<List<Map<String, dynamic>>>(
+              future: LocalDatabaseService.instance.getCachedOutfits(uid),
+              builder: (context, cacheSnapshot) {
+                final cached = cacheSnapshot.data ?? [];
+                if (cached.isNotEmpty) {
+                  final offlineOutfits =
+                      cached.map((doc) => Outfit.fromCachedMap(doc)).toList();
+                  return _buildOutfitList(offlineOutfits, isOffline: true);
+                }
+                return Center(child: Text('เกิดข้อผิดพลาด: ${snapshot.error}'));
+              },
+            );
           }
 
           final docs = snapshot.data?.docs ?? [];
           final favoritedOutfits =
               docs.map((doc) => Outfit.fromFirestore(doc)).toList();
+
+          // แคชข้อมูลลง SQLite ในเครื่องอัตโนมัติ (Offline First)
+          if (favoritedOutfits.isNotEmpty) {
+            LocalDatabaseService.instance.cacheOutfits(
+              uid,
+              favoritedOutfits.map((o) => o.toCachedMap()).toList(),
+            );
+          }
 
           if (favoritedOutfits.isEmpty) {
             return const Center(
@@ -410,130 +491,7 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16.0),
-            itemCount: favoritedOutfits.length + 1,
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'ตู้เสื้อผ้า',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF3D2C24),
-                      ),
-                    ),
-                    Text(
-                      'สไตล์ที่คุณกดดาวไว้ (ซิงค์จาก Firebase)',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF7A6458)),
-                    ),
-                    SizedBox(height: 16),
-                  ],
-                );
-              }
-
-              final outfit = favoritedOutfits[index - 1];
-
-              return GestureDetector(
-                onTap: () => _showOutfitDetail(outfit),
-                child: Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Container(
-                    width: double.infinity,
-                    color: Colors.white,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Stack(
-                          children: [
-                            _buildOutfitImage(outfit.image),
-                            Positioned(
-                              bottom: 12,
-                              left: 16,
-                              right: 60,
-                              child: Text(
-                                outfit.title,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  shadows: [
-                                    Shadow(
-                                      blurRadius: 4,
-                                      color: Colors.black54,
-                                      offset: Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Positioned(
-                              top: 12,
-                              right: 12,
-                              child: IconButton(
-                                icon: Icon(
-                                  outfit.isFavorite
-                                      ? Icons.star
-                                      : Icons.star_border,
-                                  color: Colors.orange,
-                                ),
-                                onPressed: () => _toggleFavorite(outfit),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (outfit.items.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              children: outfit.items
-                                  .map(
-                                    (i) => Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 4,
-                                      ),
-                                      child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Icon(
-                                            i.icon,
-                                            size: 18,
-                                            color: const Color(0xFF7A6458),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              i.text,
-                                              style: const TextStyle(
-                                                color: Color(0xFF4A3B32),
-                                                fontSize: 13,
-                                              ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          );
+          return _buildOutfitList(favoritedOutfits, isOffline: false);
         },
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -570,6 +528,181 @@ class _FavoriteScreenState extends State<FavoriteScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'โปรไฟล์'),
         ],
       ),
+    );
+  }
+
+  /// แสดงผลรายการเสื้อผ้า (รองรับทั้ง Online Firestore และ Offline SQLite Cache)
+  Widget _buildOutfitList(List<Outfit> outfits, {bool isOffline = false}) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16.0),
+      itemCount: outfits.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text(
+                    'ตู้เสื้อผ้า',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF3D2C24),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isOffline
+                          ? Colors.amber.shade100
+                          : const Color(0xFF382319).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: isOffline
+                          ? Border.all(
+                              color: Colors.amber.shade700, width: 0.8)
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isOffline ? Icons.offline_bolt : Icons.storage,
+                          size: 12,
+                          color: isOffline
+                              ? Colors.amber.shade900
+                              : const Color(0xFF7A6458),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isOffline ? 'SQLite ออฟไลน์' : 'SQLite แคช',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: isOffline
+                                ? Colors.amber.shade900
+                                : const Color(0xFF7A6458),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                isOffline
+                    ? 'กำลังแสดงผลจากฐานข้อมูลในเครื่อง (SQLite Local Cache)'
+                    : 'สไตล์ที่คุณกดดาวไว้ (ซิงค์ Firebase & แคช SQLite ในเครื่อง)',
+                style: const TextStyle(fontSize: 12, color: Color(0xFF7A6458)),
+              ),
+              const SizedBox(height: 16),
+            ],
+          );
+        }
+
+        final outfit = outfits[index - 1];
+
+        return GestureDetector(
+          onTap: () => _showOutfitDetail(outfit),
+          child: Card(
+            margin: const EdgeInsets.only(bottom: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Container(
+              width: double.infinity,
+              color: Colors.white,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Stack(
+                    children: [
+                      _buildOutfitImage(outfit.image),
+                      Positioned(
+                        bottom: 12,
+                        left: 16,
+                        right: 60,
+                        child: Text(
+                          outfit.title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            shadows: [
+                              Shadow(
+                                blurRadius: 4,
+                                color: Colors.black54,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Positioned(
+                        top: 12,
+                        right: 12,
+                        child: IconButton(
+                          icon: Icon(
+                            outfit.isFavorite
+                                ? Icons.star
+                                : Icons.star_border,
+                            color: Colors.orange,
+                          ),
+                          onPressed: () => _toggleFavorite(outfit),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (outfit.items.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: outfit.items
+                            .map(
+                              (i) => Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                ),
+                                child: Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(
+                                      i.icon,
+                                      size: 18,
+                                      color: const Color(0xFF7A6458),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        i.text,
+                                        style: const TextStyle(
+                                          color: Color(0xFF4A3B32),
+                                          fontSize: 13,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

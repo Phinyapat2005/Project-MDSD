@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../services/local_database_service.dart';
 import 'login_screen.dart';
 import 'home_screen.dart';
 import 'favorite.dart';
@@ -225,6 +226,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 .collection('users')
                                 .doc(userId)
                                 .update(updateData);
+
+                            // บันทึกสัดส่วนร่างกายลง Local Database (SQLite)
+                            if (updateData.containsKey('height') ||
+                                updateData.containsKey('waist') ||
+                                updateData.containsKey('weight')) {
+                              try {
+                                await LocalDatabaseService.instance.saveMeasurement(
+                                  userId: userId,
+                                  height: double.tryParse(updateData['height']?.toString() ?? ''),
+                                  waist: double.tryParse(updateData['waist']?.toString() ?? ''),
+                                  weight: double.tryParse(updateData['weight']?.toString() ?? ''),
+                                );
+                              } catch (_) {}
+                            }
 
                             navigator.pop();
                           },

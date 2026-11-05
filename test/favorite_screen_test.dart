@@ -68,6 +68,7 @@ void main() {
       // ตรวจสอบว่ามีชื่อชุดและการ์ดแสดง
       expect(find.text('Minimal Style'), findsOneWidget);
       expect(find.text('เสื้อยืดสีขาว'), findsOneWidget);
+      expect(find.text('SQLite แคช'), findsOneWidget);
 
       // แตะที่การ์ดเพื่อเปิด BottomSheet รายละเอียด
       await tester.tap(find.text('Minimal Style'));

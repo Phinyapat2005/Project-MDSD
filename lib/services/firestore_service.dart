@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FirestoreService {
@@ -30,7 +31,7 @@ class FirestoreService {
         SetOptions(merge: true),
       ); // merge: true ช่วยป้องกันการลบข้อมูลฟิลด์อื่นที่มีอยู่เดิม
     } catch (e) {
-      print('Error saving user data: $e');
+      debugPrint('Error saving user data: $e');
       rethrow;
     }
   }
@@ -53,7 +54,7 @@ class FirestoreService {
         'createdAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      print('Error adding outfit: $e');
+      debugPrint('Error adding outfit: $e');
       rethrow;
     }
   }
@@ -89,7 +90,7 @@ class FirestoreService {
             'updatedAt': FieldValue.serverTimestamp(),
           });
     } catch (e) {
-      print('Error updating outfit: $e');
+      debugPrint('Error updating outfit: $e');
       rethrow;
     }
   }
@@ -109,7 +110,7 @@ class FirestoreService {
           .doc(outfitId)
           .delete();
     } catch (e) {
-      print('Error deleting outfit: $e');
+      debugPrint('Error deleting outfit: $e');
       rethrow;
     }
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/local_database_service.dart';
 import '../widgets/ai_stylist_sheet.dart';
 import 'search_screen.dart';
 import 'favorite.dart';
@@ -290,6 +291,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                     'weight': wt.isEmpty ? '68' : wt,
                                   }, SetOptions(merge: true));
                                 }
+
+                                // บันทึกสัดส่วนร่างกายลง Local Database (SQLite)
+                                try {
+                                  await LocalDatabaseService.instance.saveMeasurement(
+                                    userId: userId,
+                                    height: double.tryParse(h.isEmpty ? '175' : h),
+                                    waist: double.tryParse(w.isEmpty ? '32' : w),
+                                    weight: double.tryParse(wt.isEmpty ? '68' : wt),
+                                  );
+                                } catch (_) {}
 
                                 if (context.mounted) {
                                   Navigator.pop(context);

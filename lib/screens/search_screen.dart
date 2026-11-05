@@ -4,6 +4,7 @@ import '../data/mock_outfits.dart';
 import '../models/outfit_item.dart';
 import '../widgets/ai_stylist_sheet.dart';
 import '../widgets/outfit_card.dart';
+import '../services/local_database_service.dart';
 import 'favorite.dart' hide OutfitItem;
 import 'profile_screen.dart';
 import 'home_screen.dart';
@@ -86,6 +87,24 @@ class _SearchScreenState extends State<SearchScreen> {
         _isFocused = _searchFocusNode.hasFocus;
       });
     });
+    _loadRecentSearches();
+  }
+
+  /// โหลดประวัติการค้นหาจาก Local SQLite Database
+  Future<void> _loadRecentSearches() async {
+    try {
+      final saved = await LocalDatabaseService.instance.getRecentSearches(
+        limit: _maxRecentSearches,
+      );
+      if (saved.isNotEmpty && mounted) {
+        setState(() {
+          _recentSearches.clear();
+          _recentSearches.addAll(saved);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading recent searches: $e');
+    }
   }
 
   @override
@@ -124,7 +143,7 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  /// บันทึกคำค้นหาลงประวัติ
+  /// บันทึกคำค้นหาลงประวัติ (ทั้ง State และ Local SQLite Database)
   void _saveToRecentSearches(String query) {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return;
@@ -135,6 +154,16 @@ class _SearchScreenState extends State<SearchScreen> {
         _recentSearches.removeLast();
       }
     });
+
+    // บันทึกลง SQLite Database แบบถาวร
+    try {
+      LocalDatabaseService.instance.insertSearch(
+        trimmed,
+        maxLimit: _maxRecentSearches,
+      );
+    } catch (e) {
+      debugPrint('Error saving search to SQLite: $e');
+    }
   }
 
   /// ทำการค้นหาจากคำที่กำหนด
@@ -169,12 +198,22 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() {
       _recentSearches.remove(query);
     });
+    try {
+      LocalDatabaseService.instance.deleteSearch(query);
+    } catch (e) {
+      debugPrint('Error deleting search from SQLite: $e');
+    }
   }
 
   void _clearAllRecentSearches() {
     setState(() {
       _recentSearches.clear();
     });
+    try {
+      LocalDatabaseService.instance.clearAllSearches();
+    } catch (e) {
+      debugPrint('Error clearing searches from SQLite: $e');
+    }
   }
 
   void _handleItemTap(OutfitItem item) {
@@ -747,13 +786,44 @@ class _SearchScreenState extends State<SearchScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'ค้นหาล่าสุด',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2C1E18),
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'ค้นหาล่าสุด',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2C1E18),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color:
+                            const Color(0xFF382319).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.storage,
+                              size: 10, color: Color(0xFF7A6458)),
+                          SizedBox(width: 3),
+                          Text(
+                            'SQLite',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF7A6458),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 GestureDetector(
                   onTap: _clearAllRecentSearches,
