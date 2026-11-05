@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'login_screen.dart';
+import 'favorite.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -12,7 +13,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  int _selectedIndex = 3;
+  final int _selectedIndex = 3;
 
   Future<void> _signOut() async {
     final navigator = Navigator.of(context);
@@ -25,7 +26,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // ฟังก์ชันแสดงหน้าต่าง Popup สำหรับแก้ไขข้อมูล (เพิ่มการตกแต่ง UI)
+  // ฟังก์ชันแสดงหน้าต่าง Popup สำหรับแก้ไขข้อมูล
   Future<void> _showEditDialog(
     String userId,
     String title,
@@ -161,7 +162,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             final updateData = <String, dynamic>{};
                             controllers.forEach((key, controller) {
                               final text = controller.text.trim();
-                              // แปลงชื่อ Label ไทยกลับเป็น Key ใน Firestore
                               if (key == 'ส่วนสูง (ชม.)') {
                                 updateData['height'] = text.isEmpty
                                     ? '-'
@@ -248,14 +248,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           final data = snapshot.data?.data() as Map<String, dynamic>? ?? {};
 
-          // ข้อมูลบัญชีจริงจาก Google
           final String name =
               currentUser.displayName ?? data['name'] ?? 'ผู้ใช้งาน';
           final String email = currentUser.email ?? data['email'] ?? '-';
           final String photoUrl =
               currentUser.photoURL ?? data['photoUrl'] ?? '';
 
-          // ข้อมูลที่ผู้ใช้กรอกเอง (ดึงจาก Firestore)
           final String phone = data['phone'] ?? 'ยังไม่ระบุ';
           final String birthDate = data['birthDate'] ?? 'ยังไม่ระบุ';
           final String height = data['height']?.toString() ?? '-';
@@ -267,7 +265,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           return SingleChildScrollView(
             child: Column(
               children: [
-                // ------------------ Header สีน้ำตาล ------------------
+                // Header สีน้ำตาล
                 Container(
                   width: double.infinity,
                   color: colorHeaderBg,
@@ -333,7 +331,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
 
-                // ------------------ เนื้อหาหลัก ------------------
+                // เนื้อหาหลัก
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -508,29 +506,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white60,
-        backgroundColor: colorHeaderBg,
-        type: BottomNavigationBarType.fixed,
         onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
+          if (index == 2) {
+            // สลับไปหน้า FavoriteScreen โดยตรง
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const FavoriteScreen()),
+            );
+          }
         },
+        backgroundColor: const Color(0xFF3D2C24),
+        selectedItemColor: Colors.white,
+        unselectedItemColor: const Color(0xFFC4B2A9),
+        type: BottomNavigationBarType.fixed,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            label: 'หน้าแรก',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'หน้าแรก'),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: 'ค้นหา'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.checkroom_outlined),
+            icon: Icon(Icons.archive),
             label: 'ตู้เสื้อผ้า',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: 'โปรไฟล์',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'โปรไฟล์'),
         ],
       ),
     );
