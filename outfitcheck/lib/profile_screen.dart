@@ -5,7 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -15,17 +15,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _selectedIndex = 3;
 
   Future<void> _signOut() async {
+    final navigator = Navigator.of(context);
     await GoogleSignIn().signOut();
     await FirebaseAuth.instance.signOut();
     if (mounted) {
-      Navigator.pushReplacement(
-        context,
+      navigator.pushReplacement(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
     }
   }
 
-  // ฟังก์ชันแสดงหน้าต่าง Popup สำหรับแก้ไขข้อมูล
+  // ฟังก์ชันแสดงหน้าต่าง Popup สำหรับแก้ไขข้อมูล (เพิ่มการตกแต่ง UI)
   Future<void> _showEditDialog(
     String userId,
     String title,
@@ -41,64 +41,181 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('แก้ไข$title'),
-          content: SingleChildScrollView(
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: Colors.white,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: controllers.entries.map((entry) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: TextField(
-                    controller: entry.value,
-                    decoration: InputDecoration(
-                      labelText: entry.key,
-                      border: const OutlineInputBorder(),
+              children: [
+                // Header สีน้ำตาลตกแต่ง Pop-up
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 20,
+                  ),
+                  color: const Color(0xFF3C261A),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.edit_note,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'แก้ไข$title',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // ส่วนเนื้อหากรอกข้อมูล
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: controllers.entries.map((entry) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: TextField(
+                            controller: entry.value,
+                            decoration: InputDecoration(
+                              labelText: entry.key,
+                              labelStyle: const TextStyle(
+                                color: Color(0xFF8C6D58),
+                              ),
+                              filled: true,
+                              fillColor: const Color(0xFFF8F4EE),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFC46835),
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
-                );
-              }).toList(),
+                ),
+                // ปุ่มดำเนินการ (ยกเลิก / บันทึก)
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: BorderSide(color: Colors.grey.shade400),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(
+                            'ยกเลิก',
+                            style: TextStyle(color: Colors.grey.shade700),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFC46835),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () async {
+                            final navigator = Navigator.of(context);
+
+                            final updateData = <String, dynamic>{};
+                            controllers.forEach((key, controller) {
+                              final text = controller.text.trim();
+                              // แปลงชื่อ Label ไทยกลับเป็น Key ใน Firestore
+                              if (key == 'ส่วนสูง (ชม.)') {
+                                updateData['height'] = text.isEmpty
+                                    ? '-'
+                                    : text;
+                              }
+                              if (key == 'น้ำหนัก (กก.)') {
+                                updateData['weight'] = text.isEmpty
+                                    ? '-'
+                                    : text;
+                              }
+                              if (key == 'รอบเอว (นิ้ว)') {
+                                updateData['waist'] = text.isEmpty ? '-' : text;
+                              }
+                              if (key == 'รอบอก (นิ้ว)') {
+                                updateData['chest'] = text.isEmpty ? '-' : text;
+                              }
+                              if (key == 'รอบสะโพก (นิ้ว)') {
+                                updateData['hips'] = text.isEmpty ? '-' : text;
+                              }
+                              if (key == 'เบอร์โทร') {
+                                updateData['phone'] = text.isEmpty
+                                    ? 'ยังไม่ระบุ'
+                                    : text;
+                              }
+                              if (key == 'วันเกิด') {
+                                updateData['birthDate'] = text.isEmpty
+                                    ? 'ยังไม่ระบุ'
+                                    : text;
+                              }
+                            });
+
+                            // อัปเดตข้อมูลขึ้น Cloud Firestore
+                            await FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(userId)
+                                .update(updateData);
+
+                            navigator.pop();
+                          },
+                          child: const Text(
+                            'บันทึก',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('ยกเลิก'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final updateData = <String, dynamic>{};
-                controllers.forEach((key, controller) {
-                  final text = controller.text.trim();
-                  // แปลงชื่อ Label ไทยกลับเป็น Key ใน Firestore
-                  if (key == 'ส่วนสูง (ชม.)')
-                    updateData['height'] = text.isEmpty ? '-' : text;
-                  if (key == 'น้ำหนัก (กก.)')
-                    updateData['weight'] = text.isEmpty ? '-' : text;
-                  if (key == 'รอบเอว (นิ้ว)')
-                    updateData['waist'] = text.isEmpty ? '-' : text;
-                  if (key == 'รอบอก (นิ้ว)')
-                    updateData['chest'] = text.isEmpty ? '-' : text;
-                  if (key == 'รอบสะโพก (นิ้ว)')
-                    updateData['hips'] = text.isEmpty ? '-' : text;
-                  if (key == 'เบอร์โทร')
-                    updateData['phone'] = text.isEmpty ? 'ยังไม่ระบุ' : text;
-                  if (key == 'วันเกิด')
-                    updateData['birthDate'] = text.isEmpty
-                        ? 'ยังไม่ระบุ'
-                        : text;
-                });
-
-                // อัปเดตข้อมูลขึ้น Cloud Firestore
-                await FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(userId)
-                    .update(updateData);
-                if (mounted) Navigator.pop(context);
-              },
-              child: const Text('บันทึก'),
-            ),
-          ],
         );
       },
     );
