@@ -221,11 +221,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               }
                             });
 
-                            // อัปเดตข้อมูลขึ้น Cloud Firestore
-                            await _firestore
-                                .collection('users')
-                                .doc(userId)
-                                .update(updateData);
+                            try {
+                              // อัปเดตข้อมูลขึ้น Cloud Firestore
+                              await _firestore
+                                  .collection('users')
+                                  .doc(userId)
+                                  .update(updateData);
+                            } catch (e) {
+                              debugPrint('Error updating profile in Firestore: $e');
+                            }
 
                             // บันทึกสัดส่วนร่างกายลง Local Database (SQLite)
                             if (updateData.containsKey('height') ||

@@ -39,8 +39,12 @@ class AiStylistService {
     return _obfuscatedKey;
   }
 
+  /// สลับใช้ Offline Fallback เสมอสำหรับการทดสอบ Unit Test / Widget Test
+  @visibleForTesting
+  static bool forceOfflineForTesting = false;
+
   /// ตรวจสอบว่ามีการใส่ API Key หรือไม่
-  static bool get hasActiveKey => activeApiKey.isNotEmpty;
+  static bool get hasActiveKey => !forceOfflineForTesting && activeApiKey.isNotEmpty;
 
   /// รายชื่อโมเดล Gemini ที่รองรับ (เน้นโมเดลความเร็วสูง)
   static const List<String> _models = [

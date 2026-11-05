@@ -5,7 +5,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final FirebaseAuth? auth;
+  final FirebaseFirestore? firestore;
+
+  const LoginScreen({
+    super.key,
+    this.auth,
+    this.firestore,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -16,6 +23,24 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _isObscure = true;
+
+  FirebaseAuth get _auth {
+    if (widget.auth != null) return widget.auth!;
+    try {
+      return FirebaseAuth.instance;
+    } catch (_) {
+      return FirebaseAuth.instance;
+    }
+  }
+
+  FirebaseFirestore get _firestore {
+    if (widget.firestore != null) return widget.firestore!;
+    try {
+      return FirebaseFirestore.instance;
+    } catch (_) {
+      return FirebaseFirestore.instance;
+    }
+  }
 
   @override
   void dispose() {
@@ -37,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final userCredential = await FirebaseAuth.instance
+      final userCredential = await _auth
           .signInWithEmailAndPassword(email: email, password: password);
 
       if (userCredential.user != null && mounted) {
@@ -81,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final userCredential = await FirebaseAuth.instance
+      final userCredential = await _auth
           .createUserWithEmailAndPassword(email: email, password: password);
 
       final user = userCredential.user;
@@ -90,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final defaultName = email.split('@').first;
 
         // บันทึกข้อมูลเริ่มต้นลง Firestore
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        await _firestore.collection('users').doc(user.uid).set({
           'name': defaultName,
           'email': email,
           'photoUrl': '',
@@ -143,14 +168,12 @@ class _LoginScreenState extends State<LoginScreen> {
         idToken: googleAuth.idToken,
       );
 
-      final UserCredential userCredential = await FirebaseAuth.instance
-          .signInWithCredential(credential);
+      final UserCredential userCredential =
+          await _auth.signInWithCredential(credential);
       final User? user = userCredential.user;
 
       if (user != null) {
-        final userDoc = FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid);
+        final userDoc = _firestore.collection('users').doc(user.uid);
         final docSnapshot = await userDoc.get();
 
         if (!docSnapshot.exists) {

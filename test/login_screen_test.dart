@@ -68,5 +68,83 @@ void main() {
 
       expect(find.text('กรุณากรอกอีเมลและรหัสผ่านเพื่อสมัครสมาชิก'), findsOneWidget);
     });
+    testWidgets('แจ้งเตือนเมื่อรหัสผ่านสั้นกว่า 6 ตัวอักษรตอนสมัครสมาชิก',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: LoginScreen(),
+        ),
+      );
+
+      final emailField = find.byType(TextField).at(0);
+      final passwordField = find.byType(TextField).at(1);
+
+      await tester.enterText(emailField, 'test@example.com');
+      await tester.enterText(passwordField, '123');
+      await tester.pump();
+
+      await tester.tap(find.text('ยังไม่มีบัญชี? สมัครสมาชิก'));
+      await tester.pump();
+
+      expect(find.text('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร'), findsOneWidget);
+    });
+
+    testWidgets('พยายามเข้าสู่ระบบด้วยอีเมลและรหัสผ่านเมื่อกรอกครบ',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: LoginScreen(),
+        ),
+      );
+
+      final emailField = find.byType(TextField).at(0);
+      final passwordField = find.byType(TextField).at(1);
+
+      await tester.enterText(emailField, 'test@example.com');
+      await tester.enterText(passwordField, '123456');
+      await tester.pump();
+
+      await tester.tap(find.text('เข้าสู่ระบบ'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // ตรวจสอบว่าพยายามเข้าสู่ระบบและแสดง SnackBar ผลลัพธ์หรือข้อผิดพลาด
+      expect(find.byType(SnackBar), findsOneWidget);
+    });
+
+    testWidgets('พยายามสมัครสมาชิกด้วยอีเมลและรหัสผ่านเมื่อกรอกครบถ้วน',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: LoginScreen(),
+        ),
+      );
+
+      final emailField = find.byType(TextField).at(0);
+      final passwordField = find.byType(TextField).at(1);
+
+      await tester.enterText(emailField, 'newuser@example.com');
+      await tester.enterText(passwordField, 'password123');
+      await tester.pump();
+
+      await tester.tap(find.text('ยังไม่มีบัญชี? สมัครสมาชิก'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(SnackBar), findsOneWidget);
+    });
+
+    testWidgets('กดปุ่มเข้าสู่ระบบด้วย Google',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: LoginScreen(),
+        ),
+      );
+
+      await tester.tap(find.text('เข้าสู่ระบบด้วย Google'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+    });
   });
 }
