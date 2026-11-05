@@ -1,6 +1,6 @@
 {
-    "name": "outfit_check",
-    "short_name": "outfit_check",
+    "name": "outfitcheck",
+    "short_name": "outfitcheck",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

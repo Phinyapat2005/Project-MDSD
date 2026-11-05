@@ -1,4 +1,4 @@
-# outfit_check
+# outfitcheck
 
 A new Flutter project.
 
