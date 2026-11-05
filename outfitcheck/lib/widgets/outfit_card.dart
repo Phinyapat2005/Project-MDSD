@@ -78,14 +78,37 @@ class OutfitCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    // Category Tag
-                    Text(
-                      item.category,
-                      style: const TextStyle(
-                        color: Color(0xFFAC5D3E),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    // Category & Gender Tag
+                    Row(
+                      children: [
+                        Text(
+                          item.category,
+                          style: const TextStyle(
+                            color: Color(0xFFAC5D3E),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (item.gender != 'Unisex') ...[
+                          const SizedBox(width: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF382319).withValues(alpha: 0.07),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              item.gender,
+                              style: const TextStyle(
+                                fontSize: 9.5,
+                                color: Color(0xFF5C493E),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     // Title
                     Text(

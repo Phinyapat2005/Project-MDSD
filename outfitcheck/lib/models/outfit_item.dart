@@ -5,6 +5,7 @@ class OutfitItem {
   final int price;
   final String imageUrl;
   final String? description;
+  final String gender; // 'ชาย', 'หญิง', 'Unisex'
 
   const OutfitItem({
     required this.id,
@@ -13,6 +14,7 @@ class OutfitItem {
     required this.price,
     required this.imageUrl,
     this.description,
+    this.gender = 'Unisex',
   });
 
   String get formattedPrice => '฿${_formatNumber(price)}';
@@ -24,4 +26,3 @@ class OutfitItem {
         );
   }
 }
-

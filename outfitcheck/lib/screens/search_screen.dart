@@ -59,6 +59,7 @@ class _SearchScreenState extends State<SearchScreen> {
   ];
 
   late String _selectedCategory;
+  String _selectedGender = 'ทั้งหมด'; // 'ทั้งหมด', 'ชาย', 'หญิง'
   String _searchQuery = '';
   bool _isFocused = false;
 
@@ -88,10 +89,14 @@ class _SearchScreenState extends State<SearchScreen> {
     return mockOutfits.where((item) {
       final matchesCategory = _selectedCategory == 'ทั้งหมด' ||
           item.category.trim() == _selectedCategory.trim();
+      final matchesGender = _selectedGender == 'ทั้งหมด' ||
+          item.gender == 'Unisex' ||
+          item.gender == _selectedGender;
       final matchesQuery = _searchQuery.isEmpty ||
           item.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          item.category.toLowerCase().contains(_searchQuery.toLowerCase());
-      return matchesCategory && matchesQuery;
+          item.category.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          item.gender.toLowerCase().contains(_searchQuery.toLowerCase());
+      return matchesCategory && matchesGender && matchesQuery;
     }).toList();
   }
 
@@ -104,6 +109,7 @@ class _SearchScreenState extends State<SearchScreen> {
     AiStylistSheet.show(
       context,
       initialPrompt: queryText,
+      initialGender: _selectedGender,
       onItemTap: (item) => _handleItemTap(item),
     );
   }
@@ -531,6 +537,9 @@ class _SearchScreenState extends State<SearchScreen> {
                     ? _buildSearchSuggestions()
                     : Column(
                         children: [
+                          // Gender Selector Segmented Control
+                          _buildGenderSelector(),
+                          const SizedBox(height: 10),
                           // Category Filter Chips
                           _buildCategoryChips(),
                           const SizedBox(height: 14),
@@ -757,6 +766,89 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
           const SizedBox(height: 20),
         ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // Widget: ตัวเลือกเพศ (Gender Selector: ทั้งหมด, ชาย, หญิง)
+  // ─────────────────────────────────────────────
+  Widget _buildGenderSelector() {
+    final genders = [
+      {'label': 'ทั้งหมด', 'icon': Icons.all_inclusive_rounded},
+      {'label': 'ชาย', 'icon': Icons.man_rounded},
+      {'label': 'หญิง', 'icon': Icons.woman_rounded},
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEFE8DF),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: genders.map((g) {
+            final label = g['label'] as String;
+            final icon = g['icon'] as IconData;
+            final isSelected = _selectedGender == label;
+
+            return Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedGender = label;
+                  });
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(vertical: 7),
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.white : Colors.transparent,
+                    borderRadius: BorderRadius.circular(11),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        icon,
+                        size: 16,
+                        color: isSelected
+                            ? const Color(0xFF382319)
+                            : const Color(0xFF8A7D75),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        label == 'ทั้งหมด'
+                            ? 'ทั้งหมด'
+                            : (label == 'ชาย' ? 'ผู้ชาย' : 'ผู้หญิง'),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: isSelected
+                              ? const Color(0xFF382319)
+                              : const Color(0xFF8A7D75),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
       ),
     );
   }

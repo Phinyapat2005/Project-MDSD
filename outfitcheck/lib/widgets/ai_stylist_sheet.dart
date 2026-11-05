@@ -5,17 +5,20 @@ import '../services/ai_stylist_service.dart';
 
 class AiStylistSheet extends StatefulWidget {
   final String initialPrompt;
+  final String initialGender;
   final ValueChanged<OutfitItem>? onItemTap;
 
   const AiStylistSheet({
     super.key,
     this.initialPrompt = 'ชุดไปคาเฟ่',
+    this.initialGender = 'ทั้งหมด',
     this.onItemTap,
   });
 
   static Future<void> show(
     BuildContext context, {
     String initialPrompt = 'ชุดไปคาเฟ่',
+    String initialGender = 'ทั้งหมด',
     ValueChanged<OutfitItem>? onItemTap,
   }) {
     return showModalBottomSheet(
@@ -24,6 +27,7 @@ class AiStylistSheet extends StatefulWidget {
       backgroundColor: Colors.transparent,
       builder: (context) => AiStylistSheet(
         initialPrompt: initialPrompt,
+        initialGender: initialGender,
         onItemTap: onItemTap,
       ),
     );
@@ -38,6 +42,7 @@ class _AiStylistSheetState extends State<AiStylistSheet> {
   final ScrollController _itemsScrollController = ScrollController();
   bool _isLoading = true;
   AiStylistResult? _result;
+  late String _selectedGender;
 
   final List<String> _quickPrompts = [
     'ชุดไปคาเฟ่',
@@ -51,6 +56,7 @@ class _AiStylistSheetState extends State<AiStylistSheet> {
   @override
   void initState() {
     super.initState();
+    _selectedGender = widget.initialGender;
     _promptController = TextEditingController(text: widget.initialPrompt);
     _requestAiAdvice(widget.initialPrompt);
   }
@@ -62,15 +68,21 @@ class _AiStylistSheetState extends State<AiStylistSheet> {
     super.dispose();
   }
 
-  Future<void> _requestAiAdvice(String prompt) async {
+  Future<void> _requestAiAdvice(String prompt, {String? gender}) async {
     final text = prompt.trim();
     if (text.isEmpty) return;
 
+    final targetGender = gender ?? _selectedGender;
+
     setState(() {
       _isLoading = true;
+      _selectedGender = targetGender;
     });
 
-    final res = await AiStylistService.recommendOutfit(text);
+    final res = await AiStylistService.recommendOutfit(
+      text,
+      gender: targetGender,
+    );
 
     if (mounted) {
       setState(() {
@@ -224,6 +236,21 @@ class _AiStylistSheetState extends State<AiStylistSheet> {
                   ),
                 ),
               ),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Gender Selector Row for AI
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                _buildGenderToggle('ทั้งหมด', '✨ ทั้งหมด'),
+                const SizedBox(width: 8),
+                _buildGenderToggle('ชาย', '👨 ชาย'),
+                const SizedBox(width: 8),
+                _buildGenderToggle('หญิง', '👩 หญิง'),
+              ],
             ),
           ),
           const SizedBox(height: 10),
@@ -667,6 +694,40 @@ class _AiStylistSheetState extends State<AiStylistSheet> {
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (Match m) => '${m[1]},',
         );
+  }
+
+  Widget _buildGenderToggle(String value, String label) {
+    final isSelected = _selectedGender == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          _requestAiAdvice(_promptController.text, gender: value);
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF382319) : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected
+                  ? const Color(0xFF382319)
+                  : const Color(0xFFE2D7CC),
+            ),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? Colors.white : const Color(0xFF5C493E),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
