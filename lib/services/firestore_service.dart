@@ -50,7 +50,7 @@ class FirestoreService {
         'createdAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      print('Error adding outfit: $e');
+      debugPrint('Error: $e');
       rethrow;
     }
   }
