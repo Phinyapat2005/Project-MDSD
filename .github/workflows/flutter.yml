@@ -11,6 +11,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: .
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -27,9 +31,10 @@ jobs:
         channel: 'stable'
 
     - name: Install dependencies
-      working-directory: ./outfitcheck
       run: flutter pub get
 
     - name: Analyze code format and syntax
-      working-directory: ./outfitcheck
       run: flutter analyze --no-fatal-warnings || true
+
+    - name: Run Unit Tests
+      run: flutter test test/firestore_test.dart
