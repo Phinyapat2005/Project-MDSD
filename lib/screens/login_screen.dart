@@ -72,13 +72,15 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } on FirebaseAuthException catch (e) {
-      String message = 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ';
+      String message = 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ (${e.code})';
       if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
         message = 'ไม่พบบัญชีหรือรหัสผ่านไม่ถูกต้อง (หากยังไม่มีบัญชี ให้กดสมัครสมาชิกด้านล่าง)';
       } else if (e.code == 'wrong-password') {
         message = 'รหัสผ่านไม่ถูกต้อง';
       } else if (e.code == 'invalid-email') {
         message = 'รูปแบบอีเมลไม่ถูกต้อง';
+      } else if (e.code == 'operation-not-allowed') {
+        message = 'Firebase ยังไม่ได้เปิดใช้งาน Email/Password ในคอนโซล';
       } else if (e.code == 'network-request-failed') {
         message = 'ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้ กรุณาตรวจสอบการเชื่อมต่อ';
       } else if (e.code == 'too-many-requests') {
@@ -119,18 +121,22 @@ class _LoginScreenState extends State<LoginScreen> {
         final defaultName = email.split('@').first;
 
         // บันทึกข้อมูลเริ่มต้นลง Firestore
-        await _firestore.collection('users').doc(user.uid).set({
-          'name': defaultName,
-          'email': email,
-          'photoUrl': '',
-          'phone': 'ยังไม่ระบุ',
-          'birthDate': 'ยังไม่ระบุ',
-          'height': '-',
-          'weight': '-',
-          'waist': '-',
-          'chest': '-',
-          'hips': '-',
-        });
+        try {
+          await _firestore.collection('users').doc(user.uid).set({
+            'name': defaultName,
+            'email': email,
+            'photoUrl': '',
+            'phone': 'ยังไม่ระบุ',
+            'birthDate': 'ยังไม่ระบุ',
+            'height': '-',
+            'weight': '-',
+            'waist': '-',
+            'chest': '-',
+            'hips': '-',
+          });
+        } catch (e) {
+          debugPrint('Firestore profile creation error: $e');
+        }
 
         if (mounted) {
           Navigator.pushReplacement(
@@ -140,13 +146,15 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } on FirebaseAuthException catch (e) {
-      String message = 'การสมัครสมาชิกล้มเหลว';
+      String message = 'การสมัครสมาชิกล้มเหลว (${e.code})';
       if (e.code == 'email-already-in-use') {
-        message = 'อีเมลนี้ถูกใช้งานแล้ว กรุณากดเข้าสู่ระบบ';
+        message = 'อีเมลนี้ถูกใช้งานแล้ว กรุณากดปุ่มเข้าสู่ระบบ';
       } else if (e.code == 'weak-password') {
         message = 'รหัสผ่านง่ายเกินไป (ต้องมีความยาวอย่างน้อย 6 ตัวอักษร)';
       } else if (e.code == 'invalid-email') {
         message = 'รูปแบบอีเมลไม่ถูกต้อง';
+      } else if (e.code == 'operation-not-allowed') {
+        message = 'Firebase ยังไม่ได้เปิดใช้งาน Email/Password ในคอนโซล';
       } else if (e.code == 'network-request-failed') {
         message = 'ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้ กรุณาตรวจสอบการเชื่อมต่อ';
       }
