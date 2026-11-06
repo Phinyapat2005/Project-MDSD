@@ -146,5 +146,21 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
     });
+
+    testWidgets('กดปุ่มทดลองใช้งานโดยไม่เข้าสู่ระบบ (Guest Mode)',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: LoginScreen(),
+        ),
+      );
+
+      final guestBtn = find.text('ทดลองใช้งานโดยไม่เข้าสู่ระบบ (Guest Mode)');
+      expect(guestBtn, findsOneWidget);
+      await tester.tap(guestBtn);
+      await tester.pumpAndSettle();
+
+      expect(find.text('แนะนำชุดวันนี้'), findsOneWidget);
+    });
   });
 }

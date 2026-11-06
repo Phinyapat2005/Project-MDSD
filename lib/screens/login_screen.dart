@@ -73,12 +73,16 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } on FirebaseAuthException catch (e) {
       String message = 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ';
-      if (e.code == 'user-not-found') {
-        message = 'ไม่พบบัญชีผู้ใช้นี้ในระบบ';
+      if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
+        message = 'ไม่พบบัญชีหรือรหัสผ่านไม่ถูกต้อง (หากยังไม่มีบัญชี ให้กดสมัครสมาชิกด้านล่าง)';
       } else if (e.code == 'wrong-password') {
         message = 'รหัสผ่านไม่ถูกต้อง';
       } else if (e.code == 'invalid-email') {
         message = 'รูปแบบอีเมลไม่ถูกต้อง';
+      } else if (e.code == 'network-request-failed') {
+        message = 'ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้ กรุณาตรวจสอบการเชื่อมต่อ';
+      } else if (e.code == 'too-many-requests') {
+        message = 'พยายามเข้าสู่ระบบถี่เกินไป กรุณารอสักครู่แล้วลองใหม่';
       }
       _showSnackBar(message, Colors.red);
     } catch (e) {
@@ -138,9 +142,13 @@ class _LoginScreenState extends State<LoginScreen> {
     } on FirebaseAuthException catch (e) {
       String message = 'การสมัครสมาชิกล้มเหลว';
       if (e.code == 'email-already-in-use') {
-        message = 'อีเมลนี้ถูกใช้งานในระบบแล้ว';
+        message = 'อีเมลนี้ถูกใช้งานแล้ว กรุณากดเข้าสู่ระบบ';
       } else if (e.code == 'weak-password') {
-        message = 'รหัสผ่านง่ายเกินไป';
+        message = 'รหัสผ่านง่ายเกินไป (ต้องมีความยาวอย่างน้อย 6 ตัวอักษร)';
+      } else if (e.code == 'invalid-email') {
+        message = 'รูปแบบอีเมลไม่ถูกต้อง';
+      } else if (e.code == 'network-request-failed') {
+        message = 'ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้ กรุณาตรวจสอบการเชื่อมต่อ';
       }
       _showSnackBar(message, Colors.red);
     } catch (e) {
@@ -354,6 +362,31 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   onPressed: _signInWithGoogle,
+                ),
+                const SizedBox(height: 16),
+
+                // ปุ่ม ทดลองใช้งานแบบ Guest
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HomeScreen(
+                          userId: 'guest',
+                          userName: 'ผู้เยี่ยมชม (Guest)',
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.person_outline, color: Color(0xFF8A7360)),
+                  label: const Text(
+                    'ทดลองใช้งานโดยไม่เข้าสู่ระบบ (Guest Mode)',
+                    style: TextStyle(
+                      color: Color(0xFF8A7360),
+                      fontSize: 14,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
                 ),
               ],
             ],
