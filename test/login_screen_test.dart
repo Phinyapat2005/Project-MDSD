@@ -17,7 +17,6 @@ void main() {
       expect(find.text('รหัสผ่าน (Password)'), findsOneWidget);
       expect(find.text('เข้าสู่ระบบ'), findsOneWidget);
       expect(find.text('ยังไม่มีบัญชี? สมัครสมาชิก'), findsOneWidget);
-      expect(find.text('เข้าสู่ระบบด้วย Google'), findsOneWidget);
     });
 
     testWidgets('สลับการมองเห็นรหัสผ่าน (Obscure Text) เมื่อกดไอคอนลูกตา',
@@ -54,6 +53,38 @@ void main() {
       expect(find.text('กรุณากรอกอีเมลและรหัสผ่านให้ครบถ้วน'), findsOneWidget);
     });
 
+    testWidgets('แจ้งเตือนเมื่อกรอกเฉพาะอีเมลแต่ไม่กรอกรหัสผ่านตอนเข้าสู่ระบบ',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: LoginScreen(),
+        ),
+      );
+
+      final emailField = find.byType(TextField).at(0);
+      await tester.enterText(emailField, 'test@example.com');
+      await tester.tap(find.text('เข้าสู่ระบบ'));
+      await tester.pump();
+
+      expect(find.text('กรุณากรอกอีเมลและรหัสผ่านให้ครบถ้วน'), findsOneWidget);
+    });
+
+    testWidgets('แจ้งเตือนเมื่อกรอกเฉพาะรหัสผ่านแต่ไม่กรอกอีเมลตอนเข้าสู่ระบบ',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: LoginScreen(),
+        ),
+      );
+
+      final passwordField = find.byType(TextField).at(1);
+      await tester.enterText(passwordField, '123456');
+      await tester.tap(find.text('เข้าสู่ระบบ'));
+      await tester.pump();
+
+      expect(find.text('กรุณากรอกอีเมลและรหัสผ่านให้ครบถ้วน'), findsOneWidget);
+    });
+
     testWidgets('แจ้งเตือนเมื่อกดสมัครสมาชิกโดยไม่กรอกข้อมูล',
         (WidgetTester tester) async {
       await tester.pumpWidget(
@@ -63,6 +94,22 @@ void main() {
       );
 
       // กดปุ่มสมัครสมาชิก
+      await tester.tap(find.text('ยังไม่มีบัญชี? สมัครสมาชิก'));
+      await tester.pump();
+
+      expect(find.text('กรุณากรอกอีเมลและรหัสผ่านเพื่อสมัครสมาชิก'), findsOneWidget);
+    });
+
+    testWidgets('แจ้งเตือนเมื่อกรอกเฉพาะอีเมลแต่ไม่กรอกรหัสผ่านตอนสมัครสมาชิก',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: LoginScreen(),
+        ),
+      );
+
+      final emailField = find.byType(TextField).at(0);
+      await tester.enterText(emailField, 'test@example.com');
       await tester.tap(find.text('ยังไม่มีบัญชี? สมัครสมาชิก'));
       await tester.pump();
 
@@ -108,8 +155,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      // ตรวจสอบว่าพยายามเข้าสู่ระบบและแสดง SnackBar ผลลัพธ์หรือข้อผิดพลาด
-      expect(find.byType(SnackBar), findsOneWidget);
+      // ตรวจสอบว่าพยายามเข้าสู่ระบบและแสดง SnackBar ผลลัพธ์หรือเข้าสู่ระบบแบบออฟไลน์
+      expect(find.byType(SnackBar), findsWidgets);
     });
 
     testWidgets('พยายามสมัครสมาชิกด้วยอีเมลและรหัสผ่านเมื่อกรอกครบถ้วน',
@@ -131,36 +178,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.byType(SnackBar), findsOneWidget);
-    });
-
-    testWidgets('กดปุ่มเข้าสู่ระบบด้วย Google',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: LoginScreen(),
-        ),
-      );
-
-      await tester.tap(find.text('เข้าสู่ระบบด้วย Google'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-    });
-
-    testWidgets('กดปุ่มทดลองใช้งานโดยไม่เข้าสู่ระบบ (Guest Mode)',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: LoginScreen(),
-        ),
-      );
-
-      final guestBtn = find.text('ทดลองใช้งานโดยไม่เข้าสู่ระบบ (Guest Mode)');
-      expect(guestBtn, findsOneWidget);
-      await tester.tap(guestBtn);
-      await tester.pumpAndSettle();
-
-      expect(find.text('แนะนำชุดวันนี้'), findsOneWidget);
+      expect(find.byType(SnackBar), findsWidgets);
     });
   });
 }

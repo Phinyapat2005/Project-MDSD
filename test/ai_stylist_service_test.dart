@@ -184,5 +184,51 @@ void main() {
       expect(result.styleVibe.isNotEmpty, true);
       expect(result.recommendedItems.isNotEmpty, true);
     });
+
+    test('ครอบคลุมเพศตรงข้ามในสถานการณ์ต่างๆ เพื่อความแม่นยำ', () async {
+      // วัด (ชาย)
+      final watBoy = await AiStylistService.recommendOffline('ไปวัดทำบุญ', gender: 'ชาย');
+      expect(watBoy.recommendedItems.isNotEmpty, true);
+
+      // แคมป์ปิ้ง (หญิง)
+      final campGirl = await AiStylistService.recommendOffline('แคมป์ปิ้งเขาใหญ่', gender: 'หญิง');
+      expect(campGirl.recommendedItems.isNotEmpty, true);
+
+      // คอนเสิร์ต (ชาย)
+      final concertBoy = await AiStylistService.recommendOffline('ไปดูคอนเสิร์ต', gender: 'ชาย');
+      expect(concertBoy.recommendedItems.isNotEmpty, true);
+
+      // เดท (หญิง)
+      final dateGirl = await AiStylistService.recommendOffline('ไปเดทวันเสาร์', gender: 'หญิง');
+      expect(dateGirl.recommendedItems.isNotEmpty, true);
+
+      // เรียนมหาลัย (ชาย)
+      final campusBoy = await AiStylistService.recommendOffline('ไปเรียน มหาลัย', gender: 'ชาย');
+      expect(campusBoy.recommendedItems.isNotEmpty, true);
+
+      // ทะเล (หญิง)
+      final beachGirl = await AiStylistService.recommendOffline('เที่ยวทะเล ชายหาด', gender: 'หญิง');
+      expect(beachGirl.recommendedItems.isNotEmpty, true);
+
+      // งานแต่ง (ชาย)
+      final weddingBoy = await AiStylistService.recommendOffline('ไปงานแต่งงาน', gender: 'ชาย');
+      expect(weddingBoy.recommendedItems.isNotEmpty, true);
+
+      // ฟิตเนส (หญิง)
+      final gymGirl = await AiStylistService.recommendOffline('ไปฟิตเนส ออกกำลังกาย', gender: 'หญิง');
+      expect(gymGirl.recommendedItems.isNotEmpty, true);
+
+      // สนามบิน (ชาย)
+      final airportBoy = await AiStylistService.recommendOffline('ไปสนามบิน', gender: 'ชาย');
+      expect(airportBoy.recommendedItems.isNotEmpty, true);
+
+      // เดินห้าง (ชาย)
+      final mallBoy = await AiStylistService.recommendOffline('เดินสยาม เซ็นทรัล', gender: 'ชาย');
+      expect(mallBoy.recommendedItems.isNotEmpty, true);
+
+      // ค้นหาทั่วไป (หญิง)
+      final generalGirl = await AiStylistService.recommendOffline('เดินเล่นแถวบ้าน', gender: 'หญิง');
+      expect(generalGirl.recommendedItems.isNotEmpty, true);
+    });
   });
 }

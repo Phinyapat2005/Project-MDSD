@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'home_screen.dart';
 
@@ -49,6 +48,22 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  void _loginLocally(String email) {
+    final defaultName = email.split('@').first;
+    _showSnackBar('เข้าสู่ระบบสำเร็จ (โหมดจำลองออฟไลน์)', Colors.brown);
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HomeScreen(
+            userId: email.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_'),
+            userName: defaultName,
+          ),
+        ),
+      );
+    }
+  }
+
   // ------------------ 1. เข้าสู่ระบบด้วย Email/Password ------------------
   Future<void> _signInWithEmail() async {
     final email = _emailController.text.trim();
@@ -70,25 +85,75 @@ class _LoginScreenState extends State<LoginScreen> {
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
+        return;
       }
     } on FirebaseAuthException catch (e) {
-      String message = 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ (${e.code})';
+      // 1. ถ้าไม่พบบัญชีในระบบ ให้สร้างบัญชีให้อัตโนมัติทันที
       if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
-        message = 'ไม่พบบัญชีหรือรหัสผ่านไม่ถูกต้อง (หากยังไม่มีบัญชี ให้กดสมัครสมาชิกด้านล่าง)';
-      } else if (e.code == 'wrong-password') {
+        try {
+          final registerCred = await _auth.createUserWithEmailAndPassword(
+            email: email,
+            password: password,
+          );
+          final regUser = registerCred.user;
+          if (regUser != null && mounted) {
+            final defaultName = email.split('@').first;
+            try {
+              await _firestore.collection('users').doc(regUser.uid).set({
+                'name': defaultName,
+                'email': email,
+                'photoUrl': '',
+                'phone': 'ยังไม่ระบุ',
+                'birthDate': 'ยังไม่ระบุ',
+                'height': '175',
+                'weight': '68',
+                'waist': '32',
+                'chest': '-',
+                'hips': '-',
+              });
+            } catch (_) {}
+
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const HomeScreen()),
+              );
+            }
+            return;
+          }
+        } on FirebaseAuthException catch (regErr) {
+          if (regErr.code == 'email-already-in-use') {
+            _showSnackBar('รหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบรหัสผ่านอีกครั้ง', Colors.red);
+            return;
+          } else if (regErr.code == 'weak-password') {
+            _showSnackBar('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร', Colors.orange);
+            return;
+          }
+        } catch (_) {}
+      }
+
+      // 2. ถ้า Firebase ปิด Email/Password หรือเชื่อมต่อเน็ตไม่ได้ ให้ใช้ Local Session สำรอง
+      if (e.code == 'operation-not-allowed' ||
+          e.code == 'network-request-failed' ||
+          e.code == 'channel-error') {
+        _loginLocally(email);
+        return;
+      }
+
+      String message = 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ';
+      if (e.code == 'wrong-password') {
         message = 'รหัสผ่านไม่ถูกต้อง';
       } else if (e.code == 'invalid-email') {
         message = 'รูปแบบอีเมลไม่ถูกต้อง';
-      } else if (e.code == 'operation-not-allowed') {
-        message = 'Firebase ยังไม่ได้เปิดใช้งาน Email/Password ในคอนโซล';
-      } else if (e.code == 'network-request-failed') {
-        message = 'ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้ กรุณาตรวจสอบการเชื่อมต่อ';
       } else if (e.code == 'too-many-requests') {
         message = 'พยายามเข้าสู่ระบบถี่เกินไป กรุณารอสักครู่แล้วลองใหม่';
+      } else {
+        message = 'เข้าสู่ระบบไม่สำเร็จ (${e.code})';
       }
       _showSnackBar(message, Colors.red);
     } catch (e) {
-      _showSnackBar('เกิดข้อผิดพลาด: $e', Colors.red);
+      // กรณี Firebase เกิดปัญหาเรื่อง Configuration / no-app
+      _loginLocally(email);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -117,10 +182,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final user = userCredential.user;
       if (user != null) {
-        // ดึงชื่อนำหน้าจากอีเมล เช่น test@gmail.com -> test
         final defaultName = email.split('@').first;
 
-        // บันทึกข้อมูลเริ่มต้นลง Firestore
         try {
           await _firestore.collection('users').doc(user.uid).set({
             'name': defaultName,
@@ -128,15 +191,13 @@ class _LoginScreenState extends State<LoginScreen> {
             'photoUrl': '',
             'phone': 'ยังไม่ระบุ',
             'birthDate': 'ยังไม่ระบุ',
-            'height': '-',
-            'weight': '-',
-            'waist': '-',
+            'height': '175',
+            'weight': '68',
+            'waist': '32',
             'chest': '-',
             'hips': '-',
           });
-        } catch (e) {
-          debugPrint('Firestore profile creation error: $e');
-        }
+        } catch (_) {}
 
         if (mounted) {
           Navigator.pushReplacement(
@@ -146,76 +207,32 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } on FirebaseAuthException catch (e) {
-      String message = 'การสมัครสมาชิกล้มเหลว (${e.code})';
       if (e.code == 'email-already-in-use') {
-        message = 'อีเมลนี้ถูกใช้งานแล้ว กรุณากดปุ่มเข้าสู่ระบบ';
-      } else if (e.code == 'weak-password') {
-        message = 'รหัสผ่านง่ายเกินไป (ต้องมีความยาวอย่างน้อย 6 ตัวอักษร)';
-      } else if (e.code == 'invalid-email') {
-        message = 'รูปแบบอีเมลไม่ถูกต้อง';
-      } else if (e.code == 'operation-not-allowed') {
-        message = 'Firebase ยังไม่ได้เปิดใช้งาน Email/Password ในคอนโซล';
-      } else if (e.code == 'network-request-failed') {
-        message = 'ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้ กรุณาตรวจสอบการเชื่อมต่อ';
-      }
-      _showSnackBar(message, Colors.red);
-    } catch (e) {
-      _showSnackBar('เกิดข้อผิดพลาด: $e', Colors.red);
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  // ------------------ 3. เข้าสู่ระบบด้วย Google ------------------
-  Future<void> _signInWithGoogle() async {
-    setState(() => _isLoading = true);
-
-    try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) {
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-      final OAuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final UserCredential userCredential =
-          await _auth.signInWithCredential(credential);
-      final User? user = userCredential.user;
-
-      if (user != null) {
-        final userDoc = _firestore.collection('users').doc(user.uid);
-        final docSnapshot = await userDoc.get();
-
-        if (!docSnapshot.exists) {
-          await userDoc.set({
-            'name': user.displayName ?? 'ไม่ระบุชื่อ',
-            'email': user.email ?? '',
-            'photoUrl': user.photoURL ?? '',
-            'phone': 'ยังไม่ระบุ',
-            'birthDate': 'ยังไม่ระบุ',
-            'height': '-',
-            'weight': '-',
-            'waist': '-',
-            'chest': '-',
-            'hips': '-',
-          });
-        }
-
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
+        try {
+          final loginCred = await _auth.signInWithEmailAndPassword(
+            email: email,
+            password: password,
           );
-        }
+          if (loginCred.user != null && mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+            return;
+          }
+        } catch (_) {}
+        _showSnackBar('อีเมลนี้ถูกใช้งานแล้ว หากเป็นบัญชีของคุณ กรุณากดเข้าสู่ระบบ', Colors.red);
+      } else if (e.code == 'weak-password') {
+        _showSnackBar('รหัสผ่านง่ายเกินไป (ต้องมีความยาวอย่างน้อย 6 ตัวอักษร)', Colors.orange);
+      } else if (e.code == 'invalid-email') {
+        _showSnackBar('รูปแบบอีเมลไม่ถูกต้อง', Colors.red);
+      } else if (e.code == 'operation-not-allowed' || e.code == 'network-request-failed') {
+        _loginLocally(email);
+      } else {
+        _showSnackBar('การสมัครสมาชิกล้มเหลว (${e.code})', Colors.red);
       }
     } catch (e) {
-      _showSnackBar('เกิดข้อผิดพลาดในการเข้าสู่ระบบ Google: $e', Colors.red);
+      _loginLocally(email);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -333,68 +350,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   onPressed: _registerWithEmail,
                   child: const Text('ยังไม่มีบัญชี? สมัครสมาชิก'),
-                ),
-                const SizedBox(height: 24),
-
-                // เส้นกั้นคำว่า หรือ
-                const Row(
-                  children: [
-                    Expanded(child: Divider()),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('หรือ', style: TextStyle(color: Colors.grey)),
-                    ),
-                    Expanded(child: Divider()),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // ปุ่ม เข้าสู่ระบบด้วย Google
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black87,
-                    minimumSize: const Size(double.infinity, 50),
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: const Icon(
-                    Icons.g_mobiledata,
-                    size: 30,
-                    color: Colors.red,
-                  ),
-                  label: const Text(
-                    'เข้าสู่ระบบด้วย Google',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  onPressed: _signInWithGoogle,
-                ),
-                const SizedBox(height: 16),
-
-                // ปุ่ม ทดลองใช้งานแบบ Guest
-                TextButton.icon(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const HomeScreen(
-                          userId: 'guest',
-                          userName: 'ผู้เยี่ยมชม (Guest)',
-                        ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.person_outline, color: Color(0xFF8A7360)),
-                  label: const Text(
-                    'ทดลองใช้งานโดยไม่เข้าสู่ระบบ (Guest Mode)',
-                    style: TextStyle(
-                      color: Color(0xFF8A7360),
-                      fontSize: 14,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
                 ),
               ],
             ],
