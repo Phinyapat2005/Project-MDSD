@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "3605259207-i0m42pr8dba3gkct4s3lknkiase7ao1i.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.outfitcheck",
+            "certificate_hash": "3923dba8066b84c33b3fde48cb63e686d8b03731"
+          }
+        },
+        {
           "client_id": "3605259207-05ni1l53hb3d61k844ajp0khh2alog2a.apps.googleusercontent.com",
           "client_type": 3
         }
